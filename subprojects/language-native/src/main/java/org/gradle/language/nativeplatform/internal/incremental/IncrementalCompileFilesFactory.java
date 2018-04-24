@@ -96,7 +96,7 @@ public class IncrementalCompileFilesFactory {
             }
 
             SourceFileState previousState = previous.getState(sourceFile);
-            CollectingMacroLookup visibleMacros = new CollectingMacroLookup();
+            CollectingMacroLookup visibleMacros = new DefaultCollectingMacroLookup();
             FileVisitResult result = visitFile(sourceFile, fileSnapshot, visibleMacros, new HashSet<HashCode>(), true);
             ArrayList<IncludeFileState> includedFiles = new ArrayList<IncludeFileState>();
             result.collectFilesInto(++traversalCount, includedFiles);
@@ -130,7 +130,7 @@ public class IncrementalCompileFilesFactory {
                 visitedFiles.put(file, fileDetails);
             }
 
-            CollectingMacroLookup includedFileDirectives = new CollectingMacroLookup();
+            CollectingMacroLookup includedFileDirectives = new DefaultCollectingMacroLookup();
             visibleMacros.append(file, fileDetails.directives);
 
             List<FileVisitResult> included = new ArrayList<FileVisitResult>(fileDetails.directives.getAll().size());

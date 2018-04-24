@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 the original author or authors.
+ * Copyright 2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,107 +16,22 @@
 
 package org.gradle.language.nativeplatform.internal.incremental;
 
-import com.google.common.collect.AbstractIterator;
 import org.gradle.language.nativeplatform.internal.IncludeDirectives;
-import org.gradle.language.nativeplatform.internal.Macro;
-import org.gradle.language.nativeplatform.internal.MacroFunction;
 
 import java.io.File;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
 
-public class CollectingMacroLookup implements MacroLookup {
-    private final List<MacroSource> uncollected = new ArrayList<MacroSource>();
-    private Map<File, IncludeDirectives> visible;
-
+public interface CollectingMacroLookup extends MacroLookup {
     /**
      * Appends a single file.
      */
-    public void append(File file, IncludeDirectives includeDirectives) {
-        if (!includeDirectives.hasMacros() && !includeDirectives.hasMacroFunctions()) {
-            // Ignore
-            return;
-        }
-        if (visible == null) {
-            visible = new LinkedHashMap<File, IncludeDirectives>();
-            visible.put(file, includeDirectives);
-        } else if (!visible.containsKey(file)) {
-            visible.put(file, includeDirectives);
-        }
-    }
+    void append(File file, IncludeDirectives includeDirectives);
 
     /**
      * Appends a source of macros
      */
-    public void append(MacroSource source) {
-        uncollected.add(source);
-    }
+    void append(MacroSource source);
 
-    @Override
-    public Iterator<Macro> getMacros(final String name) {
-        collectAll();
-        if (visible == null) {
-            return Collections.emptyIterator();
-        }
-        return new AbstractIterator<Macro>() {
-            Iterator<IncludeDirectives> files = visible.values().iterator();
-            Iterator<Macro> current = Collections.emptyIterator();
-
-            @Override
-            protected Macro computeNext() {
-                while (!current.hasNext() && files.hasNext()) {
-                    current = files.next().getMacros(name).iterator();
-                }
-                if (!current.hasNext()) {
-                    return endOfData();
-                }
-                return current.next();
-            }
-        };
-    }
-
-    @Override
-    public Iterator<MacroFunction> getMacroFunctions(final String name) {
-        collectAll();
-        if (visible == null) {
-            return Collections.emptyIterator();
-        }
-        return new AbstractIterator<MacroFunction>() {
-            Iterator<IncludeDirectives> files = visible.values().iterator();
-            Iterator<MacroFunction> current = Collections.emptyIterator();
-
-            @Override
-            protected MacroFunction computeNext() {
-                while (!current.hasNext() && files.hasNext()) {
-                    current = files.next().getMacroFunctions(name).iterator();
-                }
-                if (!current.hasNext()) {
-                    return endOfData();
-                }
-                return current.next();
-            }
-        };
-    }
-
-    public void appendTo(CollectingMacroLookup lookup) {
-        collectAll();
-        if (visible != null) {
-            for (Map.Entry<File, IncludeDirectives> entry : visible.entrySet()) {
-                lookup.append(entry.getKey(), entry.getValue());
-            }
-        }
-    }
-
-    private void collectAll() {
-        while (!uncollected.isEmpty()) {
-            MacroSource source = uncollected.remove(0);
-            source.collectInto(this);
-        }
-    }
+    void appendTo(CollectingMacroLookup lookup);
 
     interface MacroSource {
         void collectInto(CollectingMacroLookup lookup);

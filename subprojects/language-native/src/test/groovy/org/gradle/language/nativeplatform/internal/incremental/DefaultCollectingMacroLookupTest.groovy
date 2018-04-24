@@ -22,16 +22,16 @@ import org.gradle.language.nativeplatform.internal.MacroFunction
 import spock.lang.Specification
 
 
-class CollectingMacroLookupTest extends Specification {
+class DefaultCollectingMacroLookupTest extends Specification {
     def "does not contain any macros when empty"() {
-        def macros = new CollectingMacroLookup()
+        def macros = new DefaultCollectingMacroLookup()
 
         expect:
         !macros.getMacros("m").hasNext()
     }
 
     def "does not contain any macro functions when empty"() {
-        def macros = new CollectingMacroLookup()
+        def macros = new DefaultCollectingMacroLookup()
 
         expect:
         !macros.getMacroFunctions("m").hasNext()
@@ -53,7 +53,7 @@ class CollectingMacroLookupTest extends Specification {
         file3.getMacros("m") >> [m3]
 
         given:
-        def macros = new CollectingMacroLookup()
+        def macros = new DefaultCollectingMacroLookup()
         macros.append(new File("f1"), file1)
         macros.append(new File("f2"), file2)
         macros.append(new File("f3"), file3)
@@ -78,7 +78,7 @@ class CollectingMacroLookupTest extends Specification {
         file3.getMacroFunctions("m") >> [m3]
 
         given:
-        def macros = new CollectingMacroLookup()
+        def macros = new DefaultCollectingMacroLookup()
         macros.append(new File("f1"), file1)
         macros.append(new File("f2"), file2)
         macros.append(new File("f3"), file3)
