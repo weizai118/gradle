@@ -21,7 +21,6 @@ import org.gradle.api.internal.changedetection.state.FileSystemSnapshotter;
 import org.gradle.internal.file.FileType;
 import org.gradle.language.nativeplatform.internal.Expression;
 import org.gradle.language.nativeplatform.internal.Include;
-import org.gradle.language.nativeplatform.internal.IncludeDirectives;
 import org.gradle.language.nativeplatform.internal.IncludeType;
 import org.gradle.language.nativeplatform.internal.Macro;
 import org.gradle.language.nativeplatform.internal.MacroFunction;
@@ -34,6 +33,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -211,12 +211,11 @@ public class DefaultSourceIncludesResolver implements SourceIncludesResolver {
 
     private void resolveMacro(MacroLookup visibleMacros, Expression expression, ExpressionVisitor visitor, TokenLookup tokenLookup) {
         boolean found = false;
-        for (IncludeDirectives includeDirectives : visibleMacros) {
-            Iterable<Macro> macros = includeDirectives.getMacros(expression.getValue());
-            for (Macro macro : macros) {
-                found = true;
-                resolveExpression(visibleMacros, macro, visitor, tokenLookup);
-            }
+        Iterator<Macro> macros = visibleMacros.getMacros(expression.getValue());
+        while (macros.hasNext()) {
+            Macro macro = macros.next();
+            found = true;
+            resolveExpression(visibleMacros, macro, visitor, tokenLookup);
         }
         if (!found) {
             visitor.visitIdentifier(new SimpleExpression(expression.getValue(), IncludeType.IDENTIFIER));
@@ -225,19 +224,18 @@ public class DefaultSourceIncludesResolver implements SourceIncludesResolver {
 
     private void resolveMacroFunction(MacroLookup visibleMacros, Expression expression, ExpressionVisitor visitor, TokenLookup tokenLookup) {
         boolean found = false;
-        for (IncludeDirectives includeDirectives : visibleMacros) {
-            Iterable<MacroFunction> macroFunctions = includeDirectives.getMacroFunctions(expression.getValue());
-            for (MacroFunction macro : macroFunctions) {
-                List<Expression> arguments = expression.getArguments();
-                if (arguments.isEmpty() && macro.getParameterCount() == 1) {
-                    // Provide an implicit empty argument
-                    arguments = Collections.singletonList(SimpleExpression.EMPTY_EXPRESSIONS);
-                }
-                if (macro.getParameterCount() == arguments.size()) {
-                    found = true;
-                    Expression result = macro.evaluate(arguments);
-                    resolveExpression(visibleMacros, result, visitor, tokenLookup);
-                }
+        Iterator<MacroFunction> macroFunctions = visibleMacros.getMacroFunctions(expression.getValue());
+        while (macroFunctions.hasNext()) {
+            MacroFunction macro = macroFunctions.next();
+            List<Expression> arguments = expression.getArguments();
+            if (arguments.isEmpty() && macro.getParameterCount() == 1) {
+                // Provide an implicit empty argument
+                arguments = Collections.singletonList(SimpleExpression.EMPTY_EXPRESSIONS);
+            }
+            if (macro.getParameterCount() == arguments.size()) {
+                found = true;
+                Expression result = macro.evaluate(arguments);
+                resolveExpression(visibleMacros, result, visitor, tokenLookup);
             }
         }
         if (!found) {

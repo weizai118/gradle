@@ -16,7 +16,19 @@
 
 package org.gradle.language.nativeplatform.internal.incremental;
 
-import org.gradle.language.nativeplatform.internal.IncludeDirectives;
+import org.gradle.language.nativeplatform.internal.Macro;
+import org.gradle.language.nativeplatform.internal.MacroFunction;
 
-public interface MacroLookup extends Iterable<IncludeDirectives> {
+import java.util.Iterator;
+
+public interface MacroLookup {
+    /**
+     * Locates all known macros with the given name.
+     */
+    Iterator<Macro> getMacros(String name);
+
+    /**
+     * Locates all known macro functions with the given name.
+     */
+    Iterator<MacroFunction> getMacroFunctions(String name);
 }

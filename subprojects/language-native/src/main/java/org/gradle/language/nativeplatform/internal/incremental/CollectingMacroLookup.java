@@ -16,7 +16,10 @@
 
 package org.gradle.language.nativeplatform.internal.incremental;
 
+import com.google.common.collect.AbstractIterator;
 import org.gradle.language.nativeplatform.internal.IncludeDirectives;
+import org.gradle.language.nativeplatform.internal.Macro;
+import org.gradle.language.nativeplatform.internal.MacroFunction;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -54,12 +57,49 @@ public class CollectingMacroLookup implements MacroLookup {
     }
 
     @Override
-    public Iterator<IncludeDirectives> iterator() {
+    public Iterator<Macro> getMacros(final String name) {
         collectAll();
         if (visible == null) {
             return Collections.emptyIterator();
         }
-        return visible.values().iterator();
+        return new AbstractIterator<Macro>() {
+            Iterator<IncludeDirectives> files = visible.values().iterator();
+            Iterator<Macro> current = Collections.emptyIterator();
+
+            @Override
+            protected Macro computeNext() {
+                while (!current.hasNext() && files.hasNext()) {
+                    current = files.next().getMacros(name).iterator();
+                }
+                if (!current.hasNext()) {
+                    return endOfData();
+                }
+                return current.next();
+            }
+        };
+    }
+
+    @Override
+    public Iterator<MacroFunction> getMacroFunctions(final String name) {
+        collectAll();
+        if (visible == null) {
+            return Collections.emptyIterator();
+        }
+        return new AbstractIterator<MacroFunction>() {
+            Iterator<IncludeDirectives> files = visible.values().iterator();
+            Iterator<MacroFunction> current = Collections.emptyIterator();
+
+            @Override
+            protected MacroFunction computeNext() {
+                while (!current.hasNext() && files.hasNext()) {
+                    current = files.next().getMacroFunctions(name).iterator();
+                }
+                if (!current.hasNext()) {
+                    return endOfData();
+                }
+                return current.next();
+            }
+        };
     }
 
     public void appendTo(CollectingMacroLookup lookup) {
