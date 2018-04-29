@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 the original author or authors.
+ * Copyright 2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,16 +14,16 @@
  * limitations under the License.
  */
 
-package org.gradle.composite.internal;
+package org.gradle.api.internal.tasks;
 
 import org.gradle.api.artifacts.component.BuildIdentifier;
 import org.gradle.api.tasks.TaskReference;
 
-public class IncludedBuildTaskReference implements TaskReference {
+public class CrossBuildTaskReference implements TaskReference {
     private final BuildIdentifier buildIdentifier;
     private final String taskPath;
 
-    public IncludedBuildTaskReference(BuildIdentifier buildIdentifier, String taskPath) {
+    public CrossBuildTaskReference(BuildIdentifier buildIdentifier, String taskPath) {
         this.buildIdentifier = buildIdentifier;
         this.taskPath = taskPath;
     }

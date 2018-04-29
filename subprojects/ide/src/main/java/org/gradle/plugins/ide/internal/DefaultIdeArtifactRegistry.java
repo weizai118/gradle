@@ -29,7 +29,7 @@ import org.gradle.api.internal.project.ProjectStateRegistry;
 import org.gradle.api.internal.tasks.AbstractTaskDependency;
 import org.gradle.api.internal.tasks.TaskDependencyResolveContext;
 import org.gradle.api.tasks.TaskDependency;
-import org.gradle.composite.internal.IncludedBuildTaskReference;
+import org.gradle.api.internal.tasks.CrossBuildTaskReference;
 import org.gradle.initialization.BuildIdentity;
 import org.gradle.util.CollectionUtils;
 
@@ -168,7 +168,7 @@ public class DefaultIdeArtifactRegistry implements IdeArtifactRegistry {
                 @Override
                 public void visitDependencies(TaskDependencyResolveContext context) {
                     for (Task task : get().getGeneratorTasks()) {
-                        context.add(new IncludedBuildTaskReference(getOwningProject().getBuild(), task.getPath()));
+                        context.add(new CrossBuildTaskReference(getOwningProject().getBuild(), task.getPath()));
                     }
                 }
             };

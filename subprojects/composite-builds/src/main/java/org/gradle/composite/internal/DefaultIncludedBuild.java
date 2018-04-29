@@ -33,6 +33,7 @@ import org.gradle.api.internal.artifacts.DefaultProjectComponentIdentifier;
 import org.gradle.api.internal.artifacts.ForeignBuildIdentifier;
 import org.gradle.api.internal.artifacts.ivyservice.projectmodule.LocalComponentRegistry;
 import org.gradle.api.internal.project.ProjectInternal;
+import org.gradle.api.internal.tasks.CrossBuildTaskReference;
 import org.gradle.api.invocation.Gradle;
 import org.gradle.api.tasks.TaskReference;
 import org.gradle.initialization.GradleLauncher;
@@ -94,7 +95,7 @@ public class DefaultIncludedBuild implements IncludedBuildState, ConfigurableInc
     @Override
     public TaskReference task(String path) {
         Preconditions.checkArgument(path.startsWith(":"), "Task path '%s' is not a qualified task path (e.g. ':task' or ':project:task').", path);
-        return new IncludedBuildTaskReference(getBuildIdentifier(), path);
+        return new CrossBuildTaskReference(getBuildIdentifier(), path);
     }
 
     @Override

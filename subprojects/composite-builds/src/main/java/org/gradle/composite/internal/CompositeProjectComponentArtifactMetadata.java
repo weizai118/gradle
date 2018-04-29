@@ -19,6 +19,7 @@ package org.gradle.composite.internal;
 import org.gradle.api.artifacts.component.ComponentArtifactIdentifier;
 import org.gradle.api.artifacts.component.ProjectComponentIdentifier;
 import org.gradle.api.internal.tasks.AbstractTaskDependency;
+import org.gradle.api.internal.tasks.CrossBuildTaskReference;
 import org.gradle.api.internal.tasks.TaskDependencyResolveContext;
 import org.gradle.api.tasks.TaskDependency;
 import org.gradle.internal.DisplayName;
@@ -91,7 +92,7 @@ class CompositeProjectComponentArtifactMetadata implements LocalComponentArtifac
             @Override
             public void visitDependencies(TaskDependencyResolveContext context) {
                 for (String task : tasks) {
-                    context.add(new IncludedBuildTaskReference(componentIdentifier.getBuild(), task));
+                    context.add(new CrossBuildTaskReference(componentIdentifier.getBuild(), task));
                 }
             }
         };

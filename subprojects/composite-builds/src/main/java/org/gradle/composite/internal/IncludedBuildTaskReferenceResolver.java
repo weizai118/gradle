@@ -19,6 +19,7 @@ package org.gradle.composite.internal;
 import org.gradle.api.Action;
 import org.gradle.api.Task;
 import org.gradle.api.artifacts.component.BuildIdentifier;
+import org.gradle.api.internal.tasks.CrossBuildTaskReference;
 import org.gradle.api.internal.tasks.TaskReferenceResolver;
 import org.gradle.api.tasks.TaskContainer;
 import org.gradle.api.tasks.TaskInstantiationException;
@@ -37,11 +38,11 @@ public class IncludedBuildTaskReferenceResolver implements TaskReferenceResolver
 
     @Override
     public Task constructTask(final TaskReference reference, TaskContainer tasks) {
-        if (!(reference instanceof IncludedBuildTaskReference)) {
+        if (!(reference instanceof CrossBuildTaskReference)) {
             return null;
         }
 
-        final IncludedBuildTaskReference ref = (IncludedBuildTaskReference) reference;
+        final CrossBuildTaskReference ref = (CrossBuildTaskReference) reference;
 
         final BuildIdentifier sourceBuild = buildIdentity.getCurrentBuild();
         final BuildIdentifier targetBuild = ref.getBuildIdentifier();
