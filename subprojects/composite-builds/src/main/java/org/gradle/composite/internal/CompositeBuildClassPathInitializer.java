@@ -15,15 +15,18 @@
  */
 package org.gradle.composite.internal;
 
+import org.gradle.api.Task;
 import org.gradle.api.artifacts.ArtifactCollection;
 import org.gradle.api.artifacts.Configuration;
 import org.gradle.api.artifacts.component.BuildIdentifier;
-import org.gradle.api.artifacts.component.ComponentArtifactIdentifier;
-import org.gradle.api.artifacts.result.ResolvedArtifactResult;
 import org.gradle.api.internal.initialization.ScriptClassPathInitializer;
+import org.gradle.api.internal.tasks.CrossBuildTaskReference;
+import org.gradle.api.internal.tasks.TaskDependencyInternal;
+import org.gradle.api.internal.tasks.TaskDependencyResolveContext;
 import org.gradle.initialization.BuildIdentity;
 
-import java.util.Set;
+import java.util.LinkedList;
+import java.util.List;
 
 public class CompositeBuildClassPathInitializer implements ScriptClassPathInitializer {
     private final IncludedBuildTaskGraph includedBuildTaskGraph;
@@ -37,28 +40,37 @@ public class CompositeBuildClassPathInitializer implements ScriptClassPathInitia
     @Override
     public void execute(Configuration classpath) {
         ArtifactCollection artifacts = classpath.getIncoming().getArtifacts();
-        for (ResolvedArtifactResult artifactResult : artifacts.getArtifacts()) {
-            ComponentArtifactIdentifier componentArtifactIdentifier = artifactResult.getId();
-            build(currentBuild, componentArtifactIdentifier);
-        }
-    }
+        TaskDependencyInternal buildDependencies = (TaskDependencyInternal) artifacts.getArtifactFiles().getBuildDependencies();
 
-    private BuildIdentifier getBuildIdentifier(CompositeProjectComponentArtifactMetadata artifact) {
-        return artifact.getComponentId().getBuild();
-    }
+        // Queue all of the tasks required to build the classpath
+        // This should use exactly the same code that is used to build the task graphs for the main build, rather than reimplement it here, differently
+        final List<CrossBuildTaskReference> queued = new LinkedList<CrossBuildTaskReference>();
+        buildDependencies.visitDependencies(new TaskDependencyResolveContext() {
+            @Override
+            public void add(Object dependency) {
+                if (dependency instanceof TaskDependencyInternal) {
+                    ((TaskDependencyInternal)dependency).visitDependencies(this);
+                    return;
+                }
+                if (!(dependency instanceof CrossBuildTaskReference)) {
+                    throw new UnsupportedOperationException("Task dependency " + dependency + " not supported in build script classpath");
+                }
+                CrossBuildTaskReference reference = (CrossBuildTaskReference) dependency;
+                if (reference.getBuildIdentifier().equals(currentBuild)) {
+                    throw new UnsupportedOperationException("Build script classpath should not contain references to consuming build.");
+                }
+                includedBuildTaskGraph.addTask(currentBuild, reference.getBuildIdentifier(), reference.getTaskPath());
+                queued.add(reference);
+           }
 
-    public void build(BuildIdentifier requestingBuild, ComponentArtifactIdentifier artifact) {
-        if (artifact instanceof CompositeProjectComponentArtifactMetadata) {
-            CompositeProjectComponentArtifactMetadata compositeBuildArtifact = (CompositeProjectComponentArtifactMetadata) artifact;
-            BuildIdentifier targetBuild = getBuildIdentifier(compositeBuildArtifact);
-            assert !requestingBuild.equals(targetBuild);
-            Set<String> tasks = compositeBuildArtifact.getTasks();
-            for (String taskName : tasks) {
-                includedBuildTaskGraph.addTask(requestingBuild, targetBuild, taskName);
+            @Override
+            public Task getTask() {
+                return null;
             }
-            for (String taskName : tasks) {
-                includedBuildTaskGraph.awaitCompletion(targetBuild, taskName);
-            }
+        });
+        // Run the queued tasks
+        for (CrossBuildTaskReference reference : queued) {
+            includedBuildTaskGraph.awaitCompletion(reference.getBuildIdentifier(), reference.getTaskPath());
         }
     }
 }

@@ -27,9 +27,9 @@ import org.gradle.api.internal.file.FileOperations;
 import org.gradle.api.internal.project.ProjectState;
 import org.gradle.api.internal.project.ProjectStateRegistry;
 import org.gradle.api.internal.tasks.AbstractTaskDependency;
+import org.gradle.api.internal.tasks.CrossBuildTaskReference;
 import org.gradle.api.internal.tasks.TaskDependencyResolveContext;
 import org.gradle.api.tasks.TaskDependency;
-import org.gradle.api.internal.tasks.CrossBuildTaskReference;
 import org.gradle.initialization.BuildIdentity;
 import org.gradle.util.CollectionUtils;
 
@@ -87,13 +87,9 @@ public class DefaultIdeArtifactRegistry implements IdeArtifactRegistry {
             for (IdeProjectMetadata ideProjectMetadata : store.get(projectId)) {
                 if (type.isInstance(ideProjectMetadata)) {
                     final T metadata = type.cast(ideProjectMetadata);
-                    // Need to use different APIs to reference a required task from outside the current build
-                    // There should be one mechanism rather than two.
-                    if (projectId.getBuild().equals(buildIdentity.getCurrentBuild())) {
-                        result.add(new MetadataFromThisBuild<T>(metadata, projectId));
-                    } else {
-                        result.add(new MetadataFromOtherBuild<T>(metadata, projectId));
-                    }
+                    // Need to wrap each dependency in a reference so that it can be consumed outside the producing build
+                    // The project metadata object should carry this information instead of needing to wrap it
+                    result.add(new MetadataFromOtherBuild<T>(metadata, projectId));
                 }
             }
         }
@@ -139,24 +135,6 @@ public class DefaultIdeArtifactRegistry implements IdeArtifactRegistry {
         }
     }
 
-    private static class MetadataFromThisBuild<T extends IdeProjectMetadata> extends AbstractReference<T> {
-        MetadataFromThisBuild(T metadata, ProjectComponentIdentifier projectId) {
-            super(metadata, projectId);
-        }
-
-        @Override
-        public TaskDependency getBuildDependencies() {
-            return new AbstractTaskDependency() {
-                @Override
-                public void visitDependencies(TaskDependencyResolveContext context) {
-                    for (Task task : get().getGeneratorTasks()) {
-                        context.add(task);
-                    }
-                }
-            };
-        }
-    }
-
     private static class MetadataFromOtherBuild<T extends IdeProjectMetadata> extends AbstractReference<T> {
         MetadataFromOtherBuild(T metadata, ProjectComponentIdentifier projectId) {
             super(metadata, projectId);
@@ -168,7 +146,7 @@ public class DefaultIdeArtifactRegistry implements IdeArtifactRegistry {
                 @Override
                 public void visitDependencies(TaskDependencyResolveContext context) {
                     for (Task task : get().getGeneratorTasks()) {
-                        context.add(new CrossBuildTaskReference(getOwningProject().getBuild(), task.getPath()));
+                        context.add(new CrossBuildTaskReference(getOwningProject().getBuild(), task));
                     }
                 }
             };

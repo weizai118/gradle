@@ -16,8 +16,6 @@
 
 package org.gradle.composite.internal;
 
-import com.google.common.collect.Sets;
-import org.gradle.api.Task;
 import org.gradle.api.Transformer;
 import org.gradle.api.artifacts.component.ProjectComponentIdentifier;
 import org.gradle.api.internal.GradleInternal;
@@ -26,10 +24,6 @@ import org.gradle.internal.build.IncludedBuildState;
 import org.gradle.internal.component.local.model.DefaultLocalComponentMetadata;
 import org.gradle.internal.component.local.model.LocalComponentArtifactMetadata;
 import org.gradle.internal.component.local.model.LocalComponentMetadata;
-import org.gradle.internal.component.model.ComponentArtifactMetadata;
-
-import java.io.File;
-import java.util.Set;
 
 public class IncludedBuildDependencyMetadataBuilder {
     public LocalComponentMetadata build(IncludedBuildState build, ProjectComponentIdentifier projectIdentifier) {
@@ -45,19 +39,8 @@ public class IncludedBuildDependencyMetadataBuilder {
         return originalComponentMetadata.copy(componentIdentifier, new Transformer<LocalComponentArtifactMetadata, LocalComponentArtifactMetadata>() {
             @Override
             public LocalComponentArtifactMetadata transform(LocalComponentArtifactMetadata originalArtifact) {
-                File artifactFile = originalArtifact.getFile();
-                Set<String> targetTasks = getArtifactTasks(originalArtifact);
-                return new CompositeProjectComponentArtifactMetadata(componentIdentifier, originalArtifact.getName(), artifactFile, targetTasks);
+                return originalArtifact;
             }
         });
-    }
-
-    private Set<String> getArtifactTasks(ComponentArtifactMetadata artifactMetaData) {
-        Set<String> taskPaths = Sets.newLinkedHashSet();
-        Set<? extends Task> tasks = artifactMetaData.getBuildDependencies().getDependencies(null);
-        for (Task task : tasks) {
-            taskPaths.add(task.getPath());
-        }
-        return taskPaths;
     }
 }

@@ -28,6 +28,7 @@ import org.gradle.api.Transformer;
 import org.gradle.api.artifacts.ModuleVersionIdentifier;
 import org.gradle.api.artifacts.PublishArtifact;
 import org.gradle.api.artifacts.component.ComponentIdentifier;
+import org.gradle.api.artifacts.component.ProjectComponentIdentifier;
 import org.gradle.api.attributes.AttributeContainer;
 import org.gradle.api.capabilities.CapabilitiesMetadata;
 import org.gradle.api.internal.artifacts.configurations.ConfigurationInternal;
@@ -71,6 +72,7 @@ public class DefaultLocalComponentMetadata implements LocalComponentMetadata, Bu
         this.status = status;
         this.attributesSchema = attributesSchema;
     }
+
     @Override
     public ComponentIdentifier getId() {
         return componentId;
@@ -136,7 +138,7 @@ public class DefaultLocalComponentMetadata implements LocalComponentMetadata, Bu
     @Override
     public void addArtifacts(String configuration, Iterable<? extends PublishArtifact> artifacts) {
         for (PublishArtifact artifact : artifacts) {
-            LocalComponentArtifactMetadata artifactMetadata = new PublishArtifactLocalArtifactMetadata(componentId, artifact);
+            LocalComponentArtifactMetadata artifactMetadata = new PublishArtifactLocalArtifactMetadata((ProjectComponentIdentifier) componentId, artifact);
             allArtifacts.put(configuration, artifactMetadata);
         }
     }
@@ -149,7 +151,7 @@ public class DefaultLocalComponentMetadata implements LocalComponentMetadata, Bu
         } else {
             ImmutableList.Builder<LocalComponentArtifactMetadata> builder = ImmutableList.builder();
             for (PublishArtifact artifact : variant.getArtifacts()) {
-                builder.add(new PublishArtifactLocalArtifactMetadata(componentId, artifact));
+                builder.add(new PublishArtifactLocalArtifactMetadata((ProjectComponentIdentifier) componentId, artifact));
             }
             artifacts = builder.build();
         }

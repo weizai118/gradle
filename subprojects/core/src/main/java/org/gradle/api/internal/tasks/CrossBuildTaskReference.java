@@ -16,6 +16,7 @@
 
 package org.gradle.api.internal.tasks;
 
+import org.gradle.api.Task;
 import org.gradle.api.artifacts.component.BuildIdentifier;
 import org.gradle.api.tasks.TaskReference;
 
@@ -26,6 +27,11 @@ public class CrossBuildTaskReference implements TaskReference {
     public CrossBuildTaskReference(BuildIdentifier buildIdentifier, String taskPath) {
         this.buildIdentifier = buildIdentifier;
         this.taskPath = taskPath;
+    }
+
+    public CrossBuildTaskReference(BuildIdentifier buildIdentifier, Task task) {
+        this.buildIdentifier = buildIdentifier;
+        this.taskPath = task.getPath();
     }
 
     @Override

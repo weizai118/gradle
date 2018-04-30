@@ -50,8 +50,7 @@ import java.util.Set;
 @NonNullApi
 public class CachingTaskDependencyResolveContext implements TaskDependencyResolveContext {
     private final LinkedList<Object> queue = new LinkedList<Object>();
-    private final CachingDirectedGraphWalker<Object, Task> walker = new CachingDirectedGraphWalker<Object, Task>(
-            new TaskGraphImpl());
+    private final CachingDirectedGraphWalker<Object, Task> walker = new CachingDirectedGraphWalker<Object, Task>(new TaskGraphImpl());
     private Task task;
 
     public Set<? extends Task> getDependencies(@Nullable Task task, TaskDependency container) {
@@ -97,8 +96,8 @@ public class CachingTaskDependencyResolveContext implements TaskDependencyResolv
             } else if (node instanceof Task) {
                 values.add((Task) node);
             } else if (node instanceof TaskReference) {
-                TaskContainerInternal tasks = (TaskContainerInternal) task.getProject().getTasks();
-                Task task = tasks.resolveTask((TaskReference) node);
+                TaskResolver taskResolver = (TaskResolver) task.getProject().getTasks();
+                Task task = taskResolver.resolveTask((TaskReference) node);
                 values.add(task);
             } else {
                 throw new IllegalArgumentException(String.format("Cannot resolve object of unknown type %s to a Task.",

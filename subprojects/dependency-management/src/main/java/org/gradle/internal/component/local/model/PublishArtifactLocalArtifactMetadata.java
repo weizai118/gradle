@@ -16,9 +16,14 @@
 
 package org.gradle.internal.component.local.model;
 
+import org.gradle.api.Task;
 import org.gradle.api.artifacts.PublishArtifact;
 import org.gradle.api.artifacts.component.ComponentArtifactIdentifier;
 import org.gradle.api.artifacts.component.ComponentIdentifier;
+import org.gradle.api.artifacts.component.ProjectComponentIdentifier;
+import org.gradle.api.internal.tasks.AbstractTaskDependency;
+import org.gradle.api.internal.tasks.CrossBuildTaskReference;
+import org.gradle.api.internal.tasks.TaskDependencyResolveContext;
 import org.gradle.api.tasks.TaskDependency;
 import org.gradle.internal.DisplayName;
 import org.gradle.internal.component.model.DefaultIvyArtifactName;
@@ -27,10 +32,10 @@ import org.gradle.internal.component.model.IvyArtifactName;
 import java.io.File;
 
 public class PublishArtifactLocalArtifactMetadata implements LocalComponentArtifactMetadata, ComponentArtifactIdentifier, DisplayName {
-    private final ComponentIdentifier componentIdentifier;
+    private final ProjectComponentIdentifier componentIdentifier;
     private final PublishArtifact publishArtifact;
 
-    public PublishArtifactLocalArtifactMetadata(ComponentIdentifier componentIdentifier, PublishArtifact publishArtifact) {
+    public PublishArtifactLocalArtifactMetadata(ProjectComponentIdentifier componentIdentifier, PublishArtifact publishArtifact) {
         this.componentIdentifier = componentIdentifier;
         this.publishArtifact = publishArtifact;
     }
@@ -97,6 +102,15 @@ public class PublishArtifactLocalArtifactMetadata implements LocalComponentArtif
 
     @Override
     public TaskDependency getBuildDependencies() {
-        return publishArtifact.getBuildDependencies();
+        return new AbstractTaskDependency() {
+            @Override
+            public void visitDependencies(TaskDependencyResolveContext context) {
+                // Need to wrap each dependency in a reference so that it can be consumed outside the producing build
+                // Instead, the build dependencies of the artifact should carry the producing information so they don't need to be wrapped
+                for (Task task : publishArtifact.getBuildDependencies().getDependencies(context.getTask())) {
+                    context.add(new CrossBuildTaskReference(componentIdentifier.getBuild(), task));
+                }
+            }
+        };
     }
 }

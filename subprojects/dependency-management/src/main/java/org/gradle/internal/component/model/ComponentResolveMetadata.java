@@ -65,7 +65,7 @@ public interface ComponentResolveMetadata extends HasAttributes {
     ComponentResolveMetadata withSource(ModuleSource source);
 
     /**
-     * Returns the names of all of the legacy configurations for this component. May be empty, in which case the component should provide at least one variant via {@link #getVariantsForGraphTraversal(ImmutableAttributesFactory)}.
+     * Returns the names of all of the legacy configurations for this component. May be empty, in which case the component should provide at least one variant via {@link #getVariantsForGraphTraversal()}.
      */
     Set<String> getConfigurationNames();
 

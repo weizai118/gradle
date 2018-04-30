@@ -46,6 +46,9 @@ public class IncludedBuildTaskReferenceResolver implements TaskReferenceResolver
 
         final BuildIdentifier sourceBuild = buildIdentity.getCurrentBuild();
         final BuildIdentifier targetBuild = ref.getBuildIdentifier();
+        if (sourceBuild.equals(targetBuild)) {
+            return tasks.findByPath(ref.getTaskPath());
+        }
 
         includedBuilds.addTask(sourceBuild, targetBuild, ref.getTaskPath());
 
