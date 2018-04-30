@@ -16,13 +16,11 @@
 
 package org.gradle.composite.internal;
 
-import org.gradle.api.Transformer;
 import org.gradle.api.artifacts.component.ProjectComponentIdentifier;
 import org.gradle.api.internal.GradleInternal;
 import org.gradle.api.internal.artifacts.ivyservice.projectmodule.LocalComponentRegistry;
 import org.gradle.internal.build.IncludedBuildState;
 import org.gradle.internal.component.local.model.DefaultLocalComponentMetadata;
-import org.gradle.internal.component.local.model.LocalComponentArtifactMetadata;
 import org.gradle.internal.component.local.model.LocalComponentMetadata;
 
 public class IncludedBuildDependencyMetadataBuilder {
@@ -36,11 +34,6 @@ public class IncludedBuildDependencyMetadataBuilder {
     }
 
     private LocalComponentMetadata createCompositeCopy(final ProjectComponentIdentifier componentIdentifier, DefaultLocalComponentMetadata originalComponentMetadata) {
-        return originalComponentMetadata.copy(componentIdentifier, new Transformer<LocalComponentArtifactMetadata, LocalComponentArtifactMetadata>() {
-            @Override
-            public LocalComponentArtifactMetadata transform(LocalComponentArtifactMetadata originalArtifact) {
-                return originalArtifact;
-            }
-        });
+        return originalComponentMetadata.copy(componentIdentifier);
     }
 }

@@ -32,10 +32,10 @@ import org.gradle.internal.component.model.IvyArtifactName;
 import java.io.File;
 
 public class PublishArtifactLocalArtifactMetadata implements LocalComponentArtifactMetadata, ComponentArtifactIdentifier, DisplayName {
-    private final ProjectComponentIdentifier componentIdentifier;
+    private final ComponentIdentifier componentIdentifier;
     private final PublishArtifact publishArtifact;
 
-    public PublishArtifactLocalArtifactMetadata(ProjectComponentIdentifier componentIdentifier, PublishArtifact publishArtifact) {
+    public PublishArtifactLocalArtifactMetadata(ComponentIdentifier componentIdentifier, PublishArtifact publishArtifact) {
         this.componentIdentifier = componentIdentifier;
         this.publishArtifact = publishArtifact;
     }
@@ -44,8 +44,8 @@ public class PublishArtifactLocalArtifactMetadata implements LocalComponentArtif
         StringBuilder result = new StringBuilder();
         result.append(getName());
         result.append(" (")
-              .append(componentIdentifier.getDisplayName())
-              .append(")");
+            .append(componentIdentifier.getDisplayName())
+            .append(")");
         return result.toString();
     }
 
@@ -105,10 +105,12 @@ public class PublishArtifactLocalArtifactMetadata implements LocalComponentArtif
         return new AbstractTaskDependency() {
             @Override
             public void visitDependencies(TaskDependencyResolveContext context) {
+                // This should happen earlier
+                ProjectComponentIdentifier projectComponentIdentifier = (ProjectComponentIdentifier) componentIdentifier;
                 // Need to wrap each dependency in a reference so that it can be consumed outside the producing build
                 // Instead, the build dependencies of the artifact should carry the producing information so they don't need to be wrapped
                 for (Task task : publishArtifact.getBuildDependencies().getDependencies(context.getTask())) {
-                    context.add(new CrossBuildTaskReference(componentIdentifier.getBuild(), task));
+                    context.add(new CrossBuildTaskReference(projectComponentIdentifier.getBuild(), task));
                 }
             }
         };

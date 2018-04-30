@@ -24,11 +24,9 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.SetMultimap;
-import org.gradle.api.Transformer;
 import org.gradle.api.artifacts.ModuleVersionIdentifier;
 import org.gradle.api.artifacts.PublishArtifact;
 import org.gradle.api.artifacts.component.ComponentIdentifier;
-import org.gradle.api.artifacts.component.ProjectComponentIdentifier;
 import org.gradle.api.attributes.AttributeContainer;
 import org.gradle.api.capabilities.CapabilitiesMetadata;
 import org.gradle.api.internal.artifacts.configurations.ConfigurationInternal;
@@ -51,7 +49,6 @@ import org.gradle.internal.component.model.VariantResolveMetadata;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -86,28 +83,19 @@ public class DefaultLocalComponentMetadata implements LocalComponentMetadata, Bu
     /**
      * Creates a copy of this metadata, transforming the artifacts and dependencies of this component.
      */
-    public DefaultLocalComponentMetadata copy(ComponentIdentifier componentIdentifier, Transformer<LocalComponentArtifactMetadata, LocalComponentArtifactMetadata> artifacts) {
+    public DefaultLocalComponentMetadata copy(ComponentIdentifier componentIdentifier) {
         DefaultLocalComponentMetadata copy = new DefaultLocalComponentMetadata(moduleVersionId, componentIdentifier, status, attributesSchema);
         for (DefaultLocalConfigurationMetadata configuration : allConfigurations.values()) {
             copy.addConfiguration(configuration.getName(), configuration.description, configuration.extendsFrom, configuration.hierarchy, configuration.visible, configuration.transitive, configuration.attributes, configuration.canBeConsumed, configuration.canBeResolved, configuration.capabilities);
         }
 
         // Artifacts
-        // Keep track of transformed artifacts as a given artifact may appear in multiple variants
-        Map<LocalComponentArtifactMetadata, LocalComponentArtifactMetadata> transformedArtifacts = new HashMap<LocalComponentArtifactMetadata, LocalComponentArtifactMetadata>();
-        for (Map.Entry<String, LocalComponentArtifactMetadata> entry : allArtifacts.entries()) {
-            LocalComponentArtifactMetadata oldArtifact = entry.getValue();
-            LocalComponentArtifactMetadata newArtifact = copyArtifact(oldArtifact, artifacts, transformedArtifacts);
-            copy.allArtifacts.put(entry.getKey(), newArtifact);
-        }
+        copy.allArtifacts.putAll(allArtifacts);
 
         // Variants
         for (Map.Entry<String, DefaultVariantMetadata> entry : allVariants.entries()) {
             DefaultVariantMetadata oldVariant = entry.getValue();
-            List<LocalComponentArtifactMetadata> newArtifacts = new ArrayList<LocalComponentArtifactMetadata>(oldVariant.getArtifacts().size());
-            for (ComponentArtifactMetadata oldArtifact : oldVariant.getArtifacts()) {
-                newArtifacts.add(copyArtifact((LocalComponentArtifactMetadata) oldArtifact, artifacts, transformedArtifacts));
-            }
+            List<ComponentArtifactMetadata> newArtifacts = new ArrayList<ComponentArtifactMetadata>(oldVariant.getArtifacts());
             copy.allVariants.put(entry.getKey(), new DefaultVariantMetadata(oldVariant.asDescribable(), oldVariant.getAttributes(), newArtifacts, oldVariant.getCapabilities()));
         }
 
@@ -126,19 +114,10 @@ public class DefaultLocalComponentMetadata implements LocalComponentMetadata, Bu
         return copy;
     }
 
-    private LocalComponentArtifactMetadata copyArtifact(LocalComponentArtifactMetadata oldArtifact, Transformer<LocalComponentArtifactMetadata, LocalComponentArtifactMetadata> transformer, Map<LocalComponentArtifactMetadata, LocalComponentArtifactMetadata> transformedArtifacts) {
-        LocalComponentArtifactMetadata newArtifact = transformedArtifacts.get(oldArtifact);
-        if (newArtifact == null) {
-            newArtifact = transformer.transform(oldArtifact);
-            transformedArtifacts.put(oldArtifact, newArtifact);
-        }
-        return newArtifact;
-    }
-
     @Override
     public void addArtifacts(String configuration, Iterable<? extends PublishArtifact> artifacts) {
         for (PublishArtifact artifact : artifacts) {
-            LocalComponentArtifactMetadata artifactMetadata = new PublishArtifactLocalArtifactMetadata((ProjectComponentIdentifier) componentId, artifact);
+            LocalComponentArtifactMetadata artifactMetadata = new PublishArtifactLocalArtifactMetadata(componentId, artifact);
             allArtifacts.put(configuration, artifactMetadata);
         }
     }
@@ -151,7 +130,7 @@ public class DefaultLocalComponentMetadata implements LocalComponentMetadata, Bu
         } else {
             ImmutableList.Builder<LocalComponentArtifactMetadata> builder = ImmutableList.builder();
             for (PublishArtifact artifact : variant.getArtifacts()) {
-                builder.add(new PublishArtifactLocalArtifactMetadata((ProjectComponentIdentifier) componentId, artifact));
+                builder.add(new PublishArtifactLocalArtifactMetadata(componentId, artifact));
             }
             artifacts = builder.build();
         }
