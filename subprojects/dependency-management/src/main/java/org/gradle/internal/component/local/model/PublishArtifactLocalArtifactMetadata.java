@@ -105,12 +105,17 @@ public class PublishArtifactLocalArtifactMetadata implements LocalComponentArtif
         return new AbstractTaskDependency() {
             @Override
             public void visitDependencies(TaskDependencyResolveContext context) {
-                // This should happen earlier
-                ProjectComponentIdentifier projectComponentIdentifier = (ProjectComponentIdentifier) componentIdentifier;
-                // Need to wrap each dependency in a reference so that it can be consumed outside the producing build
-                // Instead, the build dependencies of the artifact should carry the producing information so they don't need to be wrapped
-                for (Task task : publishArtifact.getBuildDependencies().getDependencies(context.getTask())) {
-                    context.add(new CrossBuildTaskReference(projectComponentIdentifier.getBuild(), task));
+                // This should be statically typed
+                if (componentIdentifier instanceof ProjectComponentIdentifier) {
+                    ProjectComponentIdentifier projectComponentIdentifier = (ProjectComponentIdentifier) componentIdentifier;
+                    // Need to wrap each dependency in a reference so that it can be consumed outside the producing build
+                    // Instead, the build dependencies of the artifact should carry the producing information so they don't need to be wrapped
+                    for (Task task : publishArtifact.getBuildDependencies().getDependencies(context.getTask())) {
+                        context.add(new CrossBuildTaskReference(projectComponentIdentifier.getBuild(), task));
+                    }
+                } else {
+                    // When using the software model
+                    context.add(publishArtifact.getBuildDependencies());
                 }
             }
         };
