@@ -25,6 +25,8 @@ import org.gradle.internal.hash.HashCode;
 import org.gradle.language.nativeplatform.internal.Include;
 import org.gradle.language.nativeplatform.internal.IncludeDirectives;
 import org.gradle.language.nativeplatform.internal.IncludeType;
+import org.gradle.language.nativeplatform.internal.Macro;
+import org.gradle.language.nativeplatform.internal.MacroFunction;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -96,8 +98,7 @@ public class IncrementalCompileFilesFactory {
             }
 
             SourceFileState previousState = previous.getState(sourceFile);
-            CollectingMacroLookup visibleMacros = new DefaultCollectingMacroLookup();
-            FileVisitResult result = visitFile(sourceFile, fileSnapshot, visibleMacros, new HashSet<HashCode>(), true);
+            FileVisitResult result = visitFile(sourceFile, fileSnapshot, MacroLookup.EMPTY, new HashSet<HashCode>(), true);
             ArrayList<IncludeFileState> includedFiles = new ArrayList<IncludeFileState>();
             result.collectFilesInto(++traversalCount, includedFiles);
             SourceFileState newState = new SourceFileState(fileSnapshot.getContent().getContentMd5(), ImmutableSet.copyOf(includedFiles));
@@ -110,11 +111,11 @@ public class IncrementalCompileFilesFactory {
             return previousState == null || result.result == IncludeFileResolutionResult.UnresolvedMacroIncludes || newState.hasChanged(previousState);
         }
 
-        private FileVisitResult visitFile(File file, FileSnapshot fileSnapshot, CollectingMacroLookup visibleMacros, Set<HashCode> visited, boolean isSourceFile) {
+        private FileVisitResult visitFile(File file, FileSnapshot fileSnapshot, MacroLookup visibleMacros, Set<HashCode> visited, boolean isSourceFile) {
             FileDetails fileDetails = visitedFiles.get(file);
             if (fileDetails != null && fileDetails.results != null) {
                 // A file that we can safely reuse the result for
-                visibleMacros.append(fileDetails.results);
+                System.out.println("-> reuse " + file.getName());
                 return fileDetails.results;
             }
 
@@ -124,6 +125,8 @@ public class IncrementalCompileFilesFactory {
                 return new FileVisitResult(file);
             }
 
+            System.out.println("-> visit " + file.getName());
+
             if (fileDetails == null) {
                 IncludeDirectives includeDirectives = sourceIncludesParser.parseIncludes(file);
                 fileDetails = new FileDetails(new IncludeFileState(newHash, file), includeDirectives);
@@ -131,7 +134,10 @@ public class IncrementalCompileFilesFactory {
             }
 
             CollectingMacroLookup includedFileDirectives = new DefaultCollectingMacroLookup();
-            visibleMacros.append(file, fileDetails.directives);
+            includedFileDirectives.append(file, fileDetails.directives);
+
+            RecordingMacroLookup recording = new RecordingMacroLookup(visibleMacros);
+            UnionMacroLookup currentVisibleMacros = new UnionMacroLookup(recording, includedFileDirectives);
 
             List<FileVisitResult> included = new ArrayList<FileVisitResult>(fileDetails.directives.getAll().size());
             IncludeFileResolutionResult result = IncludeFileResolutionResult.NoMacroIncludes;
@@ -139,7 +145,7 @@ public class IncrementalCompileFilesFactory {
                 if (include.getType() == IncludeType.MACRO && result == IncludeFileResolutionResult.NoMacroIncludes) {
                     result = IncludeFileResolutionResult.HasMacroIncludes;
                 }
-                SourceIncludesResolver.IncludeResolutionResult resolutionResult = sourceIncludesResolver.resolveInclude(file, include, visibleMacros);
+                SourceIncludesResolver.IncludeResolutionResult resolutionResult = sourceIncludesResolver.resolveInclude(file, include, currentVisibleMacros);
                 if (!resolutionResult.isComplete()) {
                     LOGGER.info("Cannot locate header file for '{}' in source file '{}'. Assuming changed.", include.getAsSourceText(), file.getName());
                     if (isSourceFile || !ignoreUnresolvedHeadersInDependencies) {
@@ -149,12 +155,35 @@ public class IncrementalCompileFilesFactory {
                 }
                 for (SourceIncludesResolver.IncludeFile includeFile : resolutionResult.getFiles()) {
                     existingHeaders.add(includeFile.getFile());
-                    FileVisitResult includeVisitResult = visitFile(includeFile.getFile(), includeFile.getSnapshot(), visibleMacros, visited, false);
+                    FileVisitResult includeVisitResult = visitFile(includeFile.getFile(), includeFile.getSnapshot(), currentVisibleMacros, visited, false);
                     if (includeVisitResult.result.ordinal() > result.ordinal()) {
                         result = includeVisitResult.result;
                     }
                     includeVisitResult.collectDependencies(includedFileDirectives);
                     included.add(includeVisitResult);
+                }
+            }
+
+            if (recording.getObservedMacros().isEmpty() && recording.getObservedMacroFunctions().isEmpty()) {
+                System.out.println("  no macros for " + file.getName());
+            } else {
+                if (!recording.getObservedMacros().isEmpty()) {
+                    System.out.println("  macros for " + file.getName());
+                    for (Map.Entry<String, Set<Macro>> entry : recording.getObservedMacros().entrySet()) {
+                        System.out.println("  - " + entry.getKey());
+                        for (Macro macro : entry.getValue()) {
+                            System.out.println("    - " + macro);
+                        }
+                    }
+                }
+                if (!recording.getObservedMacroFunctions().isEmpty()) {
+                    System.out.println("  macro functions for " + file.getName());
+                    for (Map.Entry<String, Set<MacroFunction>> entry : recording.getObservedMacroFunctions().entrySet()) {
+                        System.out.println("  - " + entry.getKey());
+                        for (MacroFunction macro : entry.getValue()) {
+                            System.out.println("    - " + macro);
+                        }
+                    }
                 }
             }
 

@@ -29,7 +29,16 @@ public abstract class AbstractMacroFunction implements MacroFunction {
 
     @Override
     public String toString() {
-        return "#define " + getName() + "(...) " + getBody();
+        StringBuilder builder = new StringBuilder();
+        builder.append("#define ").append(getName()).append("(");
+        for (int i = 0; i < getParameterCount(); i++) {
+            if (i > 0) {
+                builder.append(", ");
+            }
+            builder.append("p").append(i + 1);
+        }
+        builder.append(") ").append(getBody());
+        return builder.toString();
     }
 
     protected String getBody() {

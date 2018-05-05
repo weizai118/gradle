@@ -22,16 +22,13 @@ import org.gradle.language.nativeplatform.internal.Macro;
 import org.gradle.language.nativeplatform.internal.MacroFunction;
 
 import java.io.File;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 
 public class DefaultCollectingMacroLookup implements CollectingMacroLookup {
-    private final List<MacroSource> uncollected = new ArrayList<MacroSource>();
-    private Map<File, IncludeDirectives> visible;
+    private final Map<File, IncludeDirectives> visible = new LinkedHashMap<File, IncludeDirectives>();
 
     @Override
     public void append(File file, IncludeDirectives includeDirectives) {
@@ -39,23 +36,19 @@ public class DefaultCollectingMacroLookup implements CollectingMacroLookup {
             // Ignore
             return;
         }
-        if (visible == null) {
-            visible = new LinkedHashMap<File, IncludeDirectives>();
-            visible.put(file, includeDirectives);
-        } else if (!visible.containsKey(file)) {
+        if (!visible.containsKey(file)) {
             visible.put(file, includeDirectives);
         }
     }
 
     @Override
     public void append(MacroSource source) {
-        uncollected.add(source);
+        source.collectInto(this);
     }
 
     @Override
     public Iterator<Macro> getMacros(final String name) {
-        collectAll();
-        if (visible == null) {
+        if (visible.isEmpty()) {
             return Collections.emptyIterator();
         }
         return new AbstractIterator<Macro>() {
@@ -77,8 +70,7 @@ public class DefaultCollectingMacroLookup implements CollectingMacroLookup {
 
     @Override
     public Iterator<MacroFunction> getMacroFunctions(final String name) {
-        collectAll();
-        if (visible == null) {
+        if (visible.isEmpty()) {
             return Collections.emptyIterator();
         }
         return new AbstractIterator<MacroFunction>() {
@@ -100,19 +92,8 @@ public class DefaultCollectingMacroLookup implements CollectingMacroLookup {
 
     @Override
     public void appendTo(CollectingMacroLookup lookup) {
-        collectAll();
-        if (visible != null) {
-            for (Map.Entry<File, IncludeDirectives> entry : visible.entrySet()) {
-                lookup.append(entry.getKey(), entry.getValue());
-            }
+        for (Map.Entry<File, IncludeDirectives> entry : visible.entrySet()) {
+            lookup.append(entry.getKey(), entry.getValue());
         }
     }
-
-    private void collectAll() {
-        while (!uncollected.isEmpty()) {
-            MacroSource source = uncollected.remove(0);
-            source.collectInto(this);
-        }
-    }
-
 }
