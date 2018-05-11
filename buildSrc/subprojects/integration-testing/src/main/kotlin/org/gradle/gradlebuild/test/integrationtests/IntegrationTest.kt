@@ -28,7 +28,6 @@ import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.PathSensitive
 import org.gradle.api.tasks.PathSensitivity
 import org.gradle.process.CommandLineArgumentProvider
-import java.util.concurrent.Callable
 
 
 /**
@@ -43,8 +42,8 @@ open class IntegrationTest : DistributionTest() {
     val userguideSamples = UserguideSamples(project.layout)
 
     init {
-        jvmArgumentProviders.add(UserguideIntegrationTestEnvironmentProvider(userguideSamples))
-        dependsOn(Callable { if (userguideSamples.required) ":docs:extractSamples" else null })
+//        jvmArgumentProviders.add(UserguideIntegrationTestEnvironmentProvider(userguideSamples))
+//        dependsOn(Callable { if (userguideSamples.required) ":docs:extractSamples" else null })
     }
 }
 
@@ -73,15 +72,15 @@ class UserguideIntegrationTestEnvironmentProvider(private val samplesInternal: U
             if (samplesInternal.required) samplesInternal
             else null
 
-    override fun asArguments() =
-        if (samplesInternal.required) {
-            mapOf(
-                "integTest.userGuideInfoDir" to samplesInternal.samplesXml.asFile.get().parentFile.absolutePath,
-                "integTest.userGuideOutputDir" to samplesInternal.userGuideSamplesOutput.asFile.get().absolutePath
-            ).asSystemPropertyJvmArguments()
-        } else {
+    override fun asArguments(): Iterable<String> =
+//        if (samplesInternal.required) {
+//            mapOf(
+//                "integTest.userGuideInfoDir" to samplesInternal.samplesXml.asFile.get().parentFile.absolutePath,
+//                "integTest.userGuideOutputDir" to samplesInternal.userGuideSamplesOutput.asFile.get().absolutePath
+//            ).asSystemPropertyJvmArguments()
+//        } else {
             emptyList()
-        }
+//        }
 
     override fun getName() =
         "userguide"
