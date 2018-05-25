@@ -34,7 +34,7 @@ import org.gradle.api.internal.file.FileResolver;
 import org.gradle.authentication.Authentication;
 import org.gradle.internal.component.external.model.ModuleComponentArtifactIdentifier;
 import org.gradle.internal.component.external.model.ModuleComponentArtifactMetadata;
-import org.gradle.internal.resource.local.FileStore;
+import org.gradle.internal.resource.local.AccessTrackingFileStore;
 import org.gradle.internal.resource.local.LocallyAvailableResourceFinder;
 
 import java.io.File;
@@ -49,14 +49,14 @@ public class DefaultFlatDirArtifactRepository extends AbstractArtifactRepository
     private List<Object> dirs = new ArrayList<Object>();
     private final RepositoryTransportFactory transportFactory;
     private final LocallyAvailableResourceFinder<ModuleComponentArtifactMetadata> locallyAvailableResourceFinder;
-    private final FileStore<ModuleComponentArtifactIdentifier> artifactFileStore;
+    private final AccessTrackingFileStore<ModuleComponentArtifactIdentifier> artifactFileStore;
     private final ImmutableModuleIdentifierFactory moduleIdentifierFactory;
     private final IvyMutableModuleMetadataFactory metadataFactory;
 
     public DefaultFlatDirArtifactRepository(FileResolver fileResolver,
                                             RepositoryTransportFactory transportFactory,
                                             LocallyAvailableResourceFinder<ModuleComponentArtifactMetadata> locallyAvailableResourceFinder,
-                                            FileStore<ModuleComponentArtifactIdentifier> artifactFileStore,
+                                            AccessTrackingFileStore<ModuleComponentArtifactIdentifier> artifactFileStore,
                                             ImmutableModuleIdentifierFactory moduleIdentifierFactory,
                                             IvyMutableModuleMetadataFactory metadataFactory) {
         this.fileResolver = fileResolver;
