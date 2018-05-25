@@ -16,23 +16,31 @@
 
 package org.gradle.integtests.samples
 
+import org.gradle.integtests.fixtures.logging.ArtifactResolutionOmittingOutputNormalizer
+import org.gradle.integtests.fixtures.logging.NativeComponentReportOutputNormalizer
+import org.gradle.integtests.fixtures.logging.SampleOutputNormalizer
+import org.gradle.samples.test.normalizer.FileSeparatorOutputNormalizer
+import org.gradle.samples.test.normalizer.JavaObjectSerializationOutputNormalizer
+import org.gradle.samples.test.runner.GradleSamplesRunner
+import org.gradle.samples.test.runner.SamplesOutputNormalizers
 import org.junit.runner.RunWith
 
-@RunWith(UserGuideSamplesRunner.class)
+@RunWith(GradleSamplesRunner.class)
+@SamplesOutputNormalizers([
+    JavaObjectSerializationOutputNormalizer.class,
+    FileSeparatorOutputNormalizer.class,
+    SampleOutputNormalizer.class,
+    ArtifactResolutionOmittingOutputNormalizer.class,
+    NativeComponentReportOutputNormalizer.class
+])
 class UserGuideSamplesIntegrationTest {
     /*
     Important info:
 
-     If you're working in samples area There are gradle tasks that you should know of:
-     - gradle intTestImage makes sure that the samples' resources are copied to the right place
-     - gradle docs:extractSamples makes sure that samples' info is extracted from XMLs
-     - the 'expected' content of the asserting mechanism lives under docs/src/samples/userguideOutput
-     - Running:
-        ./gradlew intTestImage docs:extractSamples integtest:integTest --tests "*UserGuideSamplesIntegrationTest*"
+     You can run all samples tests with
+        ./gradlew :integtest:integTest --tests "UserGuideSamplesIntegrationTest"
 
-     Samples are not tested by default. For a sample to be executed and tested, you need to:
-     - add a nested <output/> tag to the <sample/> tag
-     - use the `args` parameter of the output tag to specify the tasks to be executed
-     - optionally set the name of the reference output file (by default, will use [sample id].out)
+     To run a subset of samples, use a more fine-grained test filter like
+        ./gradlew :integtest:integTest --tests "UserGuideSamplesIntegrationTest.*native*"
     */
 }
