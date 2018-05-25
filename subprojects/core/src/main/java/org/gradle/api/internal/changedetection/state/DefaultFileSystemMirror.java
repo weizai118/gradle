@@ -16,6 +16,12 @@
 
 package org.gradle.api.internal.changedetection.state;
 
+import org.gradle.api.file.RelativePath;
+import org.gradle.api.internal.changedetection.state.mirror.PhysicalDirectorySnapshot;
+import org.gradle.api.internal.changedetection.state.mirror.PhysicalFileSnapshot;
+import org.gradle.api.internal.changedetection.state.mirror.PhysicalMissingFileSnapshot;
+import org.gradle.api.internal.changedetection.state.mirror.PhysicalSnapshot;
+import org.gradle.api.internal.changedetection.state.mirror.PhysicalSnapshotRoot;
 import org.gradle.api.internal.tasks.execution.TaskOutputChangesListener;
 import org.gradle.initialization.RootBuildLifecycleListener;
 
@@ -37,6 +43,7 @@ public class DefaultFileSystemMirror implements FileSystemMirror, TaskOutputChan
     private final Map<String, Snapshot> snapshots = new ConcurrentHashMap<String, Snapshot>();
     private final Map<String, Snapshot> cacheSnapshots = new ConcurrentHashMap<String, Snapshot>();
     private final WellKnownFileLocations wellKnownFileLocations;
+    private final PhysicalSnapshotRoot root = new PhysicalSnapshotRoot();
 
     public DefaultFileSystemMirror(WellKnownFileLocations wellKnownFileLocations) {
         this.wellKnownFileLocations = wellKnownFileLocations;
@@ -50,7 +57,21 @@ public class DefaultFileSystemMirror implements FileSystemMirror, TaskOutputChan
         if (wellKnownFileLocations.isImmutable(path)) {
             return cacheFiles.get(path);
         } else {
-            return files.get(path);
+            PhysicalSnapshot physicalSnapshot = root.find(path);
+            if (physicalSnapshot == null) {
+                return null;
+            }
+            if (physicalSnapshot instanceof PhysicalDirectorySnapshot) {
+                return new DirectoryFileSnapshot(path, new RelativePath(false, physicalSnapshot.getName()), true);
+            }
+            if (physicalSnapshot instanceof PhysicalFileSnapshot) {
+                PhysicalFileSnapshot file = (PhysicalFileSnapshot) physicalSnapshot;
+                return new RegularFileSnapshot(path, new RelativePath(true, file.getName()), true, new FileHashSnapshot(file.getHash(), file.getTimestamp()));
+            }
+            if (physicalSnapshot instanceof PhysicalMissingFileSnapshot) {
+                return new MissingFileSnapshot(path, new RelativePath(true, physicalSnapshot.getName()));
+            }
+            throw new IllegalStateException("Only files, dirs and missing files are possible");
         }
     }
 
@@ -59,7 +80,22 @@ public class DefaultFileSystemMirror implements FileSystemMirror, TaskOutputChan
         if (wellKnownFileLocations.isImmutable(file.getPath())) {
             cacheFiles.put(file.getPath(), file);
         } else {
-            files.put(file.getPath(), file);
+            PhysicalSnapshot snapshot;
+            switch (file.getType()) {
+                case Directory:
+                    snapshot = new PhysicalDirectorySnapshot(file.getName());
+                    break;
+                case Missing:
+                    snapshot = new PhysicalMissingFileSnapshot(file.getName());
+                    break;
+                case RegularFile:
+                    FileHashSnapshot content = (FileHashSnapshot) file.getContent();
+                    snapshot = new PhysicalFileSnapshot(file.getName(), content.getLastModified(),  content.getContentMd5());
+                    break;
+                default:
+                    throw new IllegalStateException("Unknown file type");
+            }
+            root.add(file.getPath(), snapshot);
         }
     }
 
@@ -107,7 +143,7 @@ public class DefaultFileSystemMirror implements FileSystemMirror, TaskOutputChan
     public void beforeTaskOutputChanged() {
         // When the task outputs are generated, throw away all state for files that do not live in an append-only cache.
         // This is intentionally very simple, to be improved later
-        files.clear();
+        root.clear();
         trees.clear();
         snapshots.clear();
     }
@@ -119,7 +155,7 @@ public class DefaultFileSystemMirror implements FileSystemMirror, TaskOutputChan
     @Override
     public void beforeComplete() {
         // We throw away all state between builds
-        files.clear();
+        root.clear();
         cacheFiles.clear();
         trees.clear();
         cacheTrees.clear();
