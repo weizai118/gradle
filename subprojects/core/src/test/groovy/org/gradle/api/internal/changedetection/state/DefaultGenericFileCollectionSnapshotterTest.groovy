@@ -54,7 +54,7 @@ class DefaultGenericFileCollectionSnapshotterTest extends Specification {
         snapshot.elements == [file, file2, file3]
     }
 
-    def getElementsReturnsAllFilesRegardlessOfWhetherTheyExistedOrNot() {
+    def snapshotRetainsFilesRegardlessOfWhetherTheyExistedOrNot() {
         given:
         TestFile file = tmpDir.createFile('file1')
         TestFile noExist = tmpDir.file('file3')
@@ -63,7 +63,7 @@ class DefaultGenericFileCollectionSnapshotterTest extends Specification {
         def snapshot = snapshotter.snapshot(files(file, noExist), ABSOLUTE, normalizationStrategy)
 
         then:
-        snapshot.elements == [file, noExist]
+        snapshot.snapshots.keySet().collect { new File(it) } as List == [file, noExist]
     }
 
     def getElementsIncludesRootDirectories() {
@@ -72,27 +72,25 @@ class DefaultGenericFileCollectionSnapshotterTest extends Specification {
         TestFile dir = tmpDir.createDir('dir')
         TestFile dir2 = dir.createDir('dir2')
         TestFile file2 = dir2.createFile('file2')
-        TestFile noExist = tmpDir.file('file3')
 
         when:
-        def snapshot = snapshotter.snapshot(files(file, dir, noExist), ABSOLUTE, normalizationStrategy)
+        def snapshot = snapshotter.snapshot(files(file, dir), ABSOLUTE, normalizationStrategy)
 
         then:
-        snapshot.elements == [file, dir, dir2, file2, noExist]
+        snapshot.elements == [file, dir, dir2, file2]
     }
 
     def "retains order of elements in the snapshot"() {
         given:
         TestFile file = tmpDir.createFile('file1')
-        TestFile file2 = tmpDir.file('file2')
-        TestFile file3 = tmpDir.file('file3')
+        TestFile file2 = tmpDir.createFile('file2')
         TestFile file4 = tmpDir.createFile('file4')
 
         when:
-        def snapshot = snapshotter.snapshot(files(file, file2, file3, file4), ABSOLUTE, normalizationStrategy)
+        def snapshot = snapshotter.snapshot(files(file, file2, file4), ABSOLUTE, normalizationStrategy)
 
         then:
-        snapshot.elements == [file, file2, file3, file4]
+        snapshot.elements == [file, file2, file4]
     }
 
     def generatesEventWhenFileAdded() {

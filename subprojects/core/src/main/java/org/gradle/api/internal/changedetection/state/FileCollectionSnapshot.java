@@ -40,7 +40,7 @@ public interface FileCollectionSnapshot extends Snapshot {
     HashCode getHash();
 
     /**
-     * Returns the elements of this snapshot, including regular files, directories and missing files
+     * Returns the elements of this snapshot, including regular files and directories
      */
     Collection<File> getElements();
 

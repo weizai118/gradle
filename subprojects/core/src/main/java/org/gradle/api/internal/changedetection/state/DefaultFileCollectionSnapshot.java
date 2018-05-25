@@ -50,12 +50,6 @@ public class DefaultFileCollectionSnapshot implements FileCollectionSnapshot {
             return doGetElements();
         }
     });
-    private final Factory<List<File>> cachedFilesFactory = Factories.softReferenceCache(new Factory<List<File>>() {
-        @Override
-        public List<File> create() {
-            return doGetFiles();
-        }
-    });
     private HashCode hashCode;
 
     public DefaultFileCollectionSnapshot(Map<String, NormalizedFileSnapshot> snapshots, TaskFilePropertyCompareStrategy compareStrategy, boolean pathIsAbsolute) {
@@ -113,8 +107,10 @@ public class DefaultFileCollectionSnapshot implements FileCollectionSnapshot {
 
     private List<File> doGetElements() {
         List<File> files = Lists.newArrayListWithCapacity(snapshots.size());
-        for (String name : snapshots.keySet()) {
-            files.add(new File(name));
+        for (Map.Entry<String, NormalizedFileSnapshot> entry : snapshots.entrySet()) {
+            if (entry.getValue().getSnapshot().getType() != FileType.Missing) {
+                files.add(new File(entry.getKey()));
+            }
         }
         return files;
     }
@@ -122,16 +118,6 @@ public class DefaultFileCollectionSnapshot implements FileCollectionSnapshot {
     @Override
     public String toString() {
         return compareStrategy + (pathIsAbsolute ? " with absolute paths" : "") + ": " + snapshots;
-    }
-
-    private List<File> doGetFiles() {
-        List<File> files = Lists.newArrayList();
-        for (Map.Entry<String, NormalizedFileSnapshot> entry : snapshots.entrySet()) {
-            if (entry.getValue().getSnapshot().getType() == FileType.RegularFile) {
-                files.add(new File(entry.getKey()));
-            }
-        }
-        return files;
     }
 
     public static class SerializerImpl extends AbstractSerializer<DefaultFileCollectionSnapshot> {
