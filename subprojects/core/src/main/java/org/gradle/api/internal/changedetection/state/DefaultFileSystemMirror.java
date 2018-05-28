@@ -107,6 +107,7 @@ public class DefaultFileSystemMirror implements FileSystemMirror, TaskOutputChan
     public void beforeTaskOutputChanged() {
         // When the task outputs are generated, throw away all state for files that do not live in an append-only cache.
         // This is intentionally very simple, to be improved later
+        System.out.println("File system mirror invalidated");
         files.clear();
         trees.clear();
         snapshots.clear();

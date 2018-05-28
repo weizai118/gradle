@@ -115,7 +115,7 @@ public class TaskOutputCacheCommandFactory {
 
         @Override
         public BuildCacheLoadCommand.Result<OriginTaskExecutionMetadata> load(InputStream input) {
-//            taskOutputChangesListener.beforeTaskOutputChanged();
+            taskOutputChangesListener.beforeTaskOutputChanged();
             final TaskOutputPacker.UnpackResult unpackResult;
             try {
                 unpackResult = packer.unpack(outputProperties, input, taskOutputOriginFactory.createReader(task));

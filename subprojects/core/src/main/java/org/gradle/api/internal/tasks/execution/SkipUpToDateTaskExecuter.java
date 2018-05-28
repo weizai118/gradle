@@ -30,6 +30,7 @@ import org.slf4j.LoggerFactory;
 import java.util.ArrayList;
 import java.util.Formatter;
 import java.util.List;
+import java.util.Random;
 
 /**
  * A {@link TaskExecuter} which skips tasks whose outputs are up-to-date.
@@ -37,9 +38,12 @@ import java.util.List;
 public class SkipUpToDateTaskExecuter implements TaskExecuter {
     private static final Logger LOGGER = LoggerFactory.getLogger(SkipUpToDateTaskExecuter.class);
     private final TaskExecuter executer;
+    private final TaskOutputChangesListener taskOutputChangesListener;
+    private final Random random = new Random();
 
-    public SkipUpToDateTaskExecuter(TaskExecuter executer) {
+    public SkipUpToDateTaskExecuter(TaskExecuter executer, TaskOutputChangesListener taskOutputChangesListener) {
         this.executer = executer;
+        this.taskOutputChangesListener = taskOutputChangesListener;
     }
 
     public void execute(TaskInternal task, TaskStateInternal state, TaskExecutionContext context) {
@@ -48,6 +52,9 @@ public class SkipUpToDateTaskExecuter implements TaskExecuter {
 
         List<String> messages = new ArrayList<String>(TaskUpToDateState.MAX_OUT_OF_DATE_MESSAGES);
         if (taskArtifactState.isUpToDate(messages)) {
+            if (random.nextInt(6) == 0) {
+                taskOutputChangesListener.beforeTaskOutputChanged();
+            }
             LOGGER.info("Skipping {} as it is up-to-date.", task);
             state.setOutcome(TaskExecutionOutcome.UP_TO_DATE);
             context.setOriginExecutionMetadata(taskArtifactState.getExecutionHistory().getOriginExecutionMetadata());

@@ -132,7 +132,7 @@ public class TaskExecutionServices {
                 executer
             );
         }
-        executer = new SkipUpToDateTaskExecuter(executer);
+        executer = new SkipUpToDateTaskExecuter(executer, taskOutputChangesListener);
         executer = new ResolveTaskOutputCachingStateExecuter(buildCacheEnabled, executer);
         if (buildCacheEnabled || scanPluginApplied) {
             executer = new ResolveBuildCacheKeyExecuter(executer, buildOperationExecutor, buildCacheController.isEmitDebugLogging());

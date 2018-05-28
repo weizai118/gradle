@@ -68,7 +68,7 @@ public class CleanupStaleOutputsExecuter implements TaskExecuter {
             }
         }
         if (!filesToDelete.isEmpty()) {
-//            taskOutputChangesListener.beforeTaskOutputChanged();
+            taskOutputChangesListener.beforeTaskOutputChanged();
             buildOperationExecutor.run(new RunnableBuildOperation() {
                 @Override
                 public void run(BuildOperationContext context) {

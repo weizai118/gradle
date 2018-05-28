@@ -69,7 +69,7 @@ public class SkipEmptySourceFilesTaskExecuter implements TaskExecuter {
                 if (!cleanupDirectories) {
                     LOGGER.info("No leftover directories for {} will be deleted since overlapping outputs were detected.", task);
                 }
-//                taskOutputChangesListener.beforeTaskOutputChanged();
+                taskOutputChangesListener.beforeTaskOutputChanged();
                 boolean deletedFiles = false;
                 boolean debugEnabled = LOGGER.isDebugEnabled();
 

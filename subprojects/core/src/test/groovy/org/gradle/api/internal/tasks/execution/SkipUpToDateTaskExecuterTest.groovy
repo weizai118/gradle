@@ -40,7 +40,7 @@ class SkipUpToDateTaskExecuterTest extends Specification {
     def taskExecutionHistory = Mock(TaskExecutionHistory)
     Action<Task> action = Mock(Action)
 
-    def executer = new SkipUpToDateTaskExecuter(delegate)
+    def executer = new SkipUpToDateTaskExecuter(delegate, taskOutputChangesListener)
 
     def "skips task when outputs are up to date"() {
         given:
