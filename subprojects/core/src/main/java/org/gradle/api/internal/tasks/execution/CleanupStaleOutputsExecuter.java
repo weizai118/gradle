@@ -27,9 +27,9 @@ import org.gradle.api.logging.Logger;
 import org.gradle.api.logging.Logging;
 import org.gradle.internal.cleanup.BuildOutputCleanupRegistry;
 import org.gradle.internal.operations.BuildOperationContext;
+import org.gradle.internal.operations.BuildOperationDescriptor;
 import org.gradle.internal.operations.BuildOperationExecutor;
 import org.gradle.internal.operations.RunnableBuildOperation;
-import org.gradle.internal.operations.BuildOperationDescriptor;
 import org.gradle.util.GFileUtils;
 
 import java.io.File;
@@ -68,7 +68,7 @@ public class CleanupStaleOutputsExecuter implements TaskExecuter {
             }
         }
         if (!filesToDelete.isEmpty()) {
-            taskOutputChangesListener.beforeTaskOutputChanged();
+//            taskOutputChangesListener.beforeTaskOutputChanged();
             buildOperationExecutor.run(new RunnableBuildOperation() {
                 @Override
                 public void run(BuildOperationContext context) {
