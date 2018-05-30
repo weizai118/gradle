@@ -67,7 +67,6 @@ public class DefaultFileSystemSnapshotter implements FileSystemSnapshotter {
     private final FileHasher hasher;
     private final StringInterner stringInterner;
     private final FileSystem fileSystem;
-    private final DirectoryFileTreeFactory directoryFileTreeFactory;
     private final FileSystemMirror fileSystemMirror;
     private final ProducerGuard<String> producingSelfSnapshots = ProducerGuard.striped();
     private final ProducerGuard<String> producingTrees = ProducerGuard.striped();
@@ -78,7 +77,6 @@ public class DefaultFileSystemSnapshotter implements FileSystemSnapshotter {
         this.hasher = hasher;
         this.stringInterner = stringInterner;
         this.fileSystem = fileSystem;
-        this.directoryFileTreeFactory = directoryFileTreeFactory;
         this.fileSystemMirror = fileSystemMirror;
         snapshotter = new DefaultGenericFileCollectionSnapshotter(stringInterner, directoryFileTreeFactory, this);
     }
