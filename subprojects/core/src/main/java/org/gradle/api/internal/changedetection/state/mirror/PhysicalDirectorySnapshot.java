@@ -16,6 +16,12 @@
 
 package org.gradle.api.internal.changedetection.state.mirror;
 
+import com.google.common.base.Preconditions;
+import org.gradle.api.internal.changedetection.state.DirContentSnapshot;
+import org.gradle.internal.Cast;
+
+import java.util.Deque;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -55,11 +61,33 @@ public class PhysicalDirectorySnapshot implements PhysicalSnapshot {
             } else {
                 newChild = new PhysicalDirectorySnapshot(currentSegment);
             }
-            child = children.putIfAbsent(currentSegment, newChild);
-            if (child == null) {
-                child = newChild;
-            }
+            child = add(currentSegment, newChild);
         }
         return child.add(segments, offset + 1, snapshot);
+    }
+
+    @Override
+    public void visitTree(PhysicalFileVisitor visitor, Deque<String> relativePath) {
+        for (Map.Entry<String, PhysicalSnapshot> entry : children.entrySet()) {
+            relativePath.addLast(entry.getKey());
+            entry.getValue().visitSelf(visitor, relativePath);
+            entry.getValue().visitTree(visitor, relativePath);
+            relativePath.removeLast();
+        }
+    }
+
+    @Override
+    public void visitSelf(PhysicalFileVisitor visitor, Deque<String> relativePath) {
+        visitor.visit(name, relativePath, DirContentSnapshot.INSTANCE);
+    }
+
+    public <T extends PhysicalSnapshot> T add(String relativePath, T snapshot) {
+        PhysicalSnapshot child = children.putIfAbsent(relativePath, snapshot);
+        if (child == null) {
+                child = snapshot;
+            } else {
+                Preconditions.checkState(snapshot.getClass().equals(child.getClass()), "Expected different snapshot type: requested %s, but was: %s", snapshot.getClass().getSimpleName(), child.getClass().getSimpleName());
+        }
+        return Cast.uncheckedCast(child);
     }
 }

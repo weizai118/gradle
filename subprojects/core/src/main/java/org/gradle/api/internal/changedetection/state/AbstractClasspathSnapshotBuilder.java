@@ -18,7 +18,7 @@ package org.gradle.api.internal.changedetection.state;
 
 import org.gradle.api.internal.cache.StringInterner;
 import org.gradle.api.internal.changedetection.state.mirror.FileSnapshotHelper;
-import org.gradle.api.internal.changedetection.state.mirror.PhysicalFileVisitor;
+import org.gradle.api.internal.changedetection.state.mirror.PhysicalFileTreeVisitor;
 import org.gradle.api.internal.changedetection.state.mirror.VisitableDirectoryTree;
 import org.gradle.api.logging.Logger;
 import org.gradle.api.logging.Logging;
@@ -65,7 +65,7 @@ public abstract class AbstractClasspathSnapshotBuilder implements VisitingFileCo
     @Override
     public void visitFileTreeSnapshot(VisitableDirectoryTree tree) {
         final ClasspathEntrySnapshotBuilder entryResourceCollectionBuilder = newClasspathEntrySnapshotBuilder();
-        tree.visit(new PhysicalFileVisitor() {
+        tree.visit(new PhysicalFileTreeVisitor() {
             @Override
             public void visit(String basePath, String name, Iterable<String> relativePath, FileContentSnapshot content) {
                 if (content.getType() == FileType.RegularFile) {

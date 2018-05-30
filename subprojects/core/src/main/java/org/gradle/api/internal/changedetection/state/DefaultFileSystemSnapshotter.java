@@ -17,7 +17,6 @@
 package org.gradle.api.internal.changedetection.state;
 
 import com.google.common.base.Joiner;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import org.gradle.api.NonNullApi;
 import org.gradle.api.file.FileTreeElement;
@@ -26,7 +25,10 @@ import org.gradle.api.file.FileVisitor;
 import org.gradle.api.file.RelativePath;
 import org.gradle.api.internal.cache.StringInterner;
 import org.gradle.api.internal.changedetection.state.mirror.FileSnapshotHelper;
-import org.gradle.api.internal.changedetection.state.mirror.PhysicalFileVisitor;
+import org.gradle.api.internal.changedetection.state.mirror.MirrorUpdatingDirectoryWalker;
+import org.gradle.api.internal.changedetection.state.mirror.PhysicalDirectorySnapshot;
+import org.gradle.api.internal.changedetection.state.mirror.PhysicalFileTreeVisitor;
+import org.gradle.api.internal.changedetection.state.mirror.PhysicalSnapshotBackedVisitableTree;
 import org.gradle.api.internal.changedetection.state.mirror.VisitableDirectoryTree;
 import org.gradle.api.internal.file.FileTreeInternal;
 import org.gradle.api.internal.file.collections.DirectoryFileTree;
@@ -46,6 +48,7 @@ import org.gradle.internal.nativeintegration.filesystem.FileSystem;
 import org.gradle.normalization.internal.InputNormalizationStrategy;
 
 import java.io.File;
+import java.nio.file.Path;
 import java.util.List;
 
 /**
@@ -70,13 +73,15 @@ public class DefaultFileSystemSnapshotter implements FileSystemSnapshotter {
     private final ProducerGuard<String> producingTrees = ProducerGuard.striped();
     private final ProducerGuard<String> producingAllSnapshots = ProducerGuard.striped();
     private final DefaultGenericFileCollectionSnapshotter snapshotter;
+    private final MirrorUpdatingDirectoryWalker mirrorUpdatingDirectoryWalker;
 
     public DefaultFileSystemSnapshotter(FileHasher hasher, StringInterner stringInterner, FileSystem fileSystem, DirectoryFileTreeFactory directoryFileTreeFactory, FileSystemMirror fileSystemMirror) {
         this.hasher = hasher;
         this.stringInterner = stringInterner;
         this.fileSystem = fileSystem;
         this.fileSystemMirror = fileSystemMirror;
-        snapshotter = new DefaultGenericFileCollectionSnapshotter(stringInterner, directoryFileTreeFactory, this);
+        this.snapshotter = new DefaultGenericFileCollectionSnapshotter(stringInterner, directoryFileTreeFactory, this);
+        this.mirrorUpdatingDirectoryWalker = new MirrorUpdatingDirectoryWalker(hasher);
     }
 
     @Override
@@ -164,7 +169,7 @@ public class DefaultFileSystemSnapshotter implements FileSystemSnapshotter {
     public VisitableDirectoryTree snapshotTree(final FileTreeInternal tree) {
         return new VisitableDirectoryTree() {
             @Override
-            public void visit(final PhysicalFileVisitor visitor) {
+            public void visit(final PhysicalFileTreeVisitor visitor) {
                 tree.visitTreeOrBackingFile(new FileVisitor() {
                     @Override
                     public void visitDir(FileVisitDetails dirDetails) {
@@ -187,14 +192,15 @@ public class DefaultFileSystemSnapshotter implements FileSystemSnapshotter {
         };
     }
 
+    @SuppressWarnings("Since15")
     private VisitableDirectoryTree snapshotAndCache(DirectoryFileTree directoryTree) {
         String path = internPath(directoryTree.getDir());
-        List<FileSnapshot> elements = Lists.newArrayList();
-        directoryTree.visit(new FileVisitorImpl(elements));
-        ImmutableList<FileSnapshot> descendants = ImmutableList.copyOf(elements);
-        DirectoryTreeDetails snapshot = new DirectoryTreeDetails(path, descendants);
-        fileSystemMirror.putDirectory(path, snapshot);
-        return snapshot;
+        Path rootPath = directoryTree.getDir().toPath();
+        PhysicalDirectorySnapshot rootDirectory = new PhysicalDirectorySnapshot(rootPath.getFileName().toString());
+        mirrorUpdatingDirectoryWalker.walkDir(rootPath, rootDirectory);
+        VisitableDirectoryTree visitableDir = new PhysicalSnapshotBackedVisitableTree(path, rootDirectory);
+        fileSystemMirror.putDirectory(path, visitableDir);
+        return visitableDir;
     }
 
     /*
@@ -215,8 +221,8 @@ public class DefaultFileSystemSnapshotter implements FileSystemSnapshotter {
         final Spec<FileTreeElement> spec = patterns.getAsSpec();
         return new VisitableDirectoryTree() {
             @Override
-            public void visit(final PhysicalFileVisitor visitor) {
-                snapshot.visit(new PhysicalFileVisitor() {
+            public void visit(final PhysicalFileTreeVisitor visitor) {
+                snapshot.visit(new PhysicalFileTreeVisitor() {
                     @Override
                     public void visit(String basePath, String name, Iterable<String> relativePath, FileContentSnapshot content) {
                         if (spec.isSatisfiedBy(new SnapshotFileTreeElement(FileSnapshotHelper.create(basePath, relativePath, content), fileSystem))) {
