@@ -17,8 +17,6 @@
 package org.gradle.api.internal.changedetection.state;
 
 import com.google.common.base.Joiner;
-import com.google.common.base.Predicate;
-import com.google.common.collect.Collections2;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import org.gradle.api.NonNullApi;
@@ -27,6 +25,7 @@ import org.gradle.api.file.FileVisitDetails;
 import org.gradle.api.file.FileVisitor;
 import org.gradle.api.file.RelativePath;
 import org.gradle.api.internal.cache.StringInterner;
+import org.gradle.api.internal.changedetection.state.mirror.FileSnapshotHelper;
 import org.gradle.api.internal.changedetection.state.mirror.PhysicalFileVisitor;
 import org.gradle.api.internal.changedetection.state.mirror.VisitableDirectoryTree;
 import org.gradle.api.internal.file.FileTreeInternal;
@@ -47,7 +46,6 @@ import org.gradle.internal.nativeintegration.filesystem.FileSystem;
 import org.gradle.normalization.internal.InputNormalizationStrategy;
 
 import java.io.File;
-import java.util.Collection;
 import java.util.List;
 
 /**
@@ -142,7 +140,7 @@ public class DefaultFileSystemSnapshotter implements FileSystemSnapshotter {
         final String path = dirTree.getDir().getAbsolutePath();
         final PatternSet patterns = dirTree.getPatterns();
 
-        FileTreeSnapshot snapshot = fileSystemMirror.getDirectoryTree(path);
+        VisitableDirectoryTree snapshot = fileSystemMirror.getDirectoryTree(path);
         if (snapshot != null) {
             return filterSnapshot(snapshot, patterns);
         }
@@ -195,7 +193,7 @@ public class DefaultFileSystemSnapshotter implements FileSystemSnapshotter {
         directoryTree.visit(new FileVisitorImpl(elements));
         ImmutableList<FileSnapshot> descendants = ImmutableList.copyOf(elements);
         DirectoryTreeDetails snapshot = new DirectoryTreeDetails(path, descendants);
-        fileSystemMirror.putDirectory(snapshot);
+        fileSystemMirror.putDirectory(path, snapshot);
         return snapshot;
     }
 
@@ -210,18 +208,24 @@ public class DefaultFileSystemSnapshotter implements FileSystemSnapshotter {
         return new DirectoryTreeDetails(path, elements);
     }
 
-    private VisitableDirectoryTree filterSnapshot(FileTreeSnapshot snapshot, PatternSet patterns) {
+    private VisitableDirectoryTree filterSnapshot(final VisitableDirectoryTree snapshot, PatternSet patterns) {
         if (patterns.isEmpty()) {
             return snapshot;
         }
         final Spec<FileTreeElement> spec = patterns.getAsSpec();
-        Collection<FileSnapshot> filteredDescendants = Collections2.filter(snapshot.getDescendants(), new Predicate<FileSnapshot>() {
+        return new VisitableDirectoryTree() {
             @Override
-            public boolean apply(FileSnapshot descendant) {
-                return spec.isSatisfiedBy(new SnapshotFileTreeElement(descendant, fileSystem));
+            public void visit(final PhysicalFileVisitor visitor) {
+                snapshot.visit(new PhysicalFileVisitor() {
+                    @Override
+                    public void visit(String basePath, String name, Iterable<String> relativePath, FileContentSnapshot content) {
+                        if (spec.isSatisfiedBy(new SnapshotFileTreeElement(FileSnapshotHelper.create(basePath, relativePath, content), fileSystem))) {
+                            visitor.visit(basePath, name, relativePath, content);
+                        }
+                    }
+                });
             }
-        });
-        return new DirectoryTreeDetails(snapshot.getPath(), filteredDescendants);
+        };
     }
 
     private String internPath(File file) {

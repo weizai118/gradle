@@ -57,7 +57,7 @@ class DefaultFileSystemMirrorTest extends Specification {
         mirror.getContent(file.path) == null
 
         mirror.putFile(fileSnapshot)
-        mirror.putDirectory(fileTreeSnapshot)
+        mirror.putDirectory(file.path, fileTreeSnapshot)
         mirror.putContent(file.path, snapshot)
 
         mirror.getFile(file.path).content == fileSnapshot.content
@@ -92,7 +92,7 @@ class DefaultFileSystemMirrorTest extends Specification {
         mirror.getContent(file.path) == null
 
         mirror.putFile(fileSnapshot)
-        mirror.putDirectory(fileTreeSnapshot)
+        mirror.putDirectory(file.path, fileTreeSnapshot)
         mirror.putContent(file.path, snapshot)
 
         mirror.getFile(file.path).content == fileSnapshot.content
@@ -126,7 +126,7 @@ class DefaultFileSystemMirrorTest extends Specification {
         mirror.getContent(file.path) == null
 
         mirror.putFile(fileSnapshot)
-        mirror.putDirectory(fileTreeSnapshot)
+        mirror.putDirectory(file.path, fileTreeSnapshot)
         mirror.putContent(file.path, snapshot)
 
         mirror.getFile(file.path) == fileSnapshot

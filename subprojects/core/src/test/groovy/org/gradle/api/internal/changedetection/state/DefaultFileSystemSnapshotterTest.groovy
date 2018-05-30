@@ -17,6 +17,7 @@
 package org.gradle.api.internal.changedetection.state
 
 import org.gradle.api.internal.cache.StringInterner
+import org.gradle.api.internal.changedetection.state.mirror.PhysicalFileVisitor
 import org.gradle.api.internal.file.TestFiles
 import org.gradle.api.internal.file.collections.DirectoryFileTree
 import org.gradle.caching.internal.DefaultBuildCacheHasher
@@ -180,9 +181,16 @@ class DefaultFileSystemSnapshotterTest extends Specification {
 
         when:
         def snapshot = snapshotter.snapshotDirectoryTree(filteredTree)
+        def paths = [] as Set
+        snapshot.visit(new PhysicalFileVisitor() {
+            @Override
+            void visit(String basePath, String name, Iterable<String> relativePath, FileContentSnapshot content) {
+                paths << relativePath.join('/')
+            }
+        })
 
         then: "The filtered tree uses the cached state"
-        snapshot.descendants*.relativePath*.pathString as Set == ["d1", "d1/f1", "f1"] as Set
+        paths == ["d1", "d1/f1", "f1"] as Set
     }
 
     def "snapshots a file and caches the result"() {

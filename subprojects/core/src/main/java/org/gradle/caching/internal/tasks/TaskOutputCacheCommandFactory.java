@@ -165,6 +165,7 @@ public class TaskOutputCacheCommandFactory {
                 }
                 propertySnapshotsBuilder.put(propertyName, builder.build());
 
+                String absolutePath = internedAbsolutePath(outputFile);
                 switch (property.getOutputType()) {
                     case FILE:
                         FileSnapshot singleSnapshot = Iterables.getOnlyElement(fileSnapshots, null);
@@ -174,12 +175,12 @@ public class TaskOutputCacheCommandFactory {
                             }
                             fileSystemMirror.putFile(singleSnapshot);
                         } else {
-                            fileSystemMirror.putFile(new MissingFileSnapshot(internedAbsolutePath(outputFile), RelativePath.EMPTY_ROOT));
+                            fileSystemMirror.putFile(new MissingFileSnapshot(absolutePath, RelativePath.EMPTY_ROOT));
                         }
                         break;
                     case DIRECTORY:
                         Collection<FileSnapshot> descendants = Collections2.filter(fileSnapshots, EXCLUDE_ROOT_SNAPSHOTS);
-                        fileSystemMirror.putDirectory(new DirectoryTreeDetails(internedAbsolutePath(outputFile), descendants));
+                        fileSystemMirror.putDirectory(absolutePath, new DirectoryTreeDetails(absolutePath, descendants));
                         break;
                     default:
                         throw new AssertionError();

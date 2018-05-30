@@ -99,8 +99,8 @@ class TaskOutputCacheCommandFactoryTest extends Specification {
         1 * packer.unpack(outputProperties, input, _) >> new TaskOutputPacker.UnpackResult(originMetadata, 123, fileSnapshots)
 
         then:
-        1 * fileSystemMirror.putDirectory(_) >> { DirectoryTreeDetails dir ->
-            assert dir.path == outputDir.path
+        1 * fileSystemMirror.putDirectory(_, _) >> { String path, DirectoryTreeDetails dir ->
+            assert path == outputDir.path
             assert dir.descendants as List == [outputDirFileSnapshot]
         }
         1 * fileSystemMirror.putFile(outputFileSnapshot)
