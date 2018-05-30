@@ -17,6 +17,7 @@
 package org.gradle.api.internal.changedetection.state;
 
 import com.google.common.base.Joiner;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import org.gradle.api.NonNullApi;
 import org.gradle.api.file.FileTreeElement;
@@ -194,7 +195,19 @@ public class DefaultFileSystemSnapshotter implements FileSystemSnapshotter {
 
     @SuppressWarnings("Since15")
     private VisitableDirectoryTree snapshotAndCache(DirectoryFileTree directoryTree) {
-        String path = internPath(directoryTree.getDir());
+        final FileSnapshot fileSnapshot = snapshotSelf(directoryTree.getDir());
+        final String path = internPath(directoryTree.getDir());
+        if (fileSnapshot.getType() == FileType.Missing) {
+            return PhysicalSnapshotBackedVisitableTree.EMPTY;
+        }
+        if (fileSnapshot.getType() == FileType.RegularFile) {
+            return new VisitableDirectoryTree() {
+                @Override
+                public void visit(PhysicalFileTreeVisitor visitor) {
+                    visitor.visit(path, fileSnapshot.getName(), ImmutableList.of(fileSnapshot.getName()), fileSnapshot.getContent());
+                }
+            };
+        }
         Path rootPath = directoryTree.getDir().toPath();
         PhysicalDirectorySnapshot rootDirectory = new PhysicalDirectorySnapshot(rootPath.getFileName().toString());
         mirrorUpdatingDirectoryWalker.walkDir(rootPath, rootDirectory);

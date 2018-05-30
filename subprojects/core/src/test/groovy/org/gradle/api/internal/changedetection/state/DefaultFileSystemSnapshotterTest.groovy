@@ -190,6 +190,36 @@ class DefaultFileSystemSnapshotterTest extends Specification {
         paths == ["d1", "d1/f1", "f1"] as Set
     }
 
+    def "snapshots a non-existing directory"() {
+        given:
+        def d = tmpDir.file("dir")
+
+        when:
+        def snapshot = snapshotter.snapshotDirectoryTree(dirTree(d))
+
+        then:
+        getTreeInfo(snapshot) == [null, 0]
+    }
+
+    def "snapshots file as directory tree"() {
+        given:
+        def d = tmpDir.createFile("fileAsTree")
+
+        when:
+        def snapshot = snapshotter.snapshotDirectoryTree(dirTree(d))
+
+        then:
+        getTreeInfo(snapshot) == [d.absolutePath, 1]
+        snapshot.visit(new PhysicalFileTreeVisitor() {
+            @Override
+            void visit(String basePath, String name, Iterable<String> relativePath, FileContentSnapshot content) {
+                assert basePath == d.absolutePath
+                assert name == d.name
+                assert relativePath as List == [d.name]
+            }
+        })
+    }
+
     def "snapshots a file and caches the result"() {
         def f = tmpDir.createFile("f")
 

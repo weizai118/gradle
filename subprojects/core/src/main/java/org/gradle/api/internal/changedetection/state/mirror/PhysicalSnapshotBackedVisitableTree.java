@@ -24,6 +24,12 @@ public class PhysicalSnapshotBackedVisitableTree implements VisitableDirectoryTr
     private final String basePath;
     private final PhysicalDirectorySnapshot rootDirectory;
 
+    public static final VisitableDirectoryTree EMPTY = new VisitableDirectoryTree() {
+        @Override
+        public void visit(PhysicalFileTreeVisitor visitor) {
+        }
+    };
+
     public PhysicalSnapshotBackedVisitableTree(String path, PhysicalDirectorySnapshot rootDirectory) {
         this.rootDirectory = rootDirectory;
         this.basePath = path;
