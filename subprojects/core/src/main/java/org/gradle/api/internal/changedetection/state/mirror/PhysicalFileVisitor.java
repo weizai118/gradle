@@ -19,5 +19,5 @@ package org.gradle.api.internal.changedetection.state.mirror;
 import org.gradle.api.internal.changedetection.state.FileContentSnapshot;
 
 public interface PhysicalFileVisitor {
-    void visit(String basePath, String name, Iterable<String> relativePath, FileContentSnapshot content);
+    void visit(String name, Iterable<String> relativePath, FileContentSnapshot content);
 }

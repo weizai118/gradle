@@ -17,7 +17,7 @@
 package org.gradle.api.internal.changedetection.state;
 
 import org.gradle.api.NonNullApi;
-import org.gradle.api.internal.changedetection.state.mirror.PhysicalFileVisitor;
+import org.gradle.api.internal.changedetection.state.mirror.PhysicalFileTreeVisitor;
 
 import java.util.Collection;
 
@@ -52,7 +52,7 @@ public class DirectoryTreeDetails implements FileTreeSnapshot {
     }
 
     @Override
-    public void visit(PhysicalFileVisitor visitor) {
+    public void visit(PhysicalFileTreeVisitor visitor) {
         for (FileSnapshot descendant : descendants) {
             visitor.visit(path, descendant.getName(), descendant.getRelativePath(), descendant.getContent());
         }
