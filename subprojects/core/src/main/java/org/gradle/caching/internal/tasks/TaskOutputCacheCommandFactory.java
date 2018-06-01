@@ -18,6 +18,7 @@ package org.gradle.caching.internal.tasks;
 
 import com.google.common.base.Predicate;
 import com.google.common.collect.Collections2;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.ImmutableSortedMap;
 import com.google.common.collect.Iterables;
@@ -53,6 +54,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.file.Paths;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -161,7 +163,7 @@ public class TaskOutputCacheCommandFactory {
 
                 CollectingFileCollectionSnapshotBuilder builder = new CollectingFileCollectionSnapshotBuilder(UNORDERED, OutputPathNormalizationStrategy.getInstance(), stringInterner);
                 for (FileSnapshot fileSnapshot : fileSnapshots) {
-                    builder.collectFileSnapshot(fileSnapshot);
+                    builder.collectFile(Paths.get(fileSnapshot.getPath()), ImmutableList.<String>of(), fileSnapshot.getContent());
                 }
                 propertySnapshotsBuilder.put(propertyName, builder.build());
 
