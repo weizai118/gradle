@@ -21,6 +21,8 @@ import org.gradle.api.internal.changedetection.state.mirror.FileSnapshotHelper;
 import org.gradle.api.internal.changedetection.state.mirror.PhysicalFileTreeVisitor;
 import org.gradle.api.internal.changedetection.state.mirror.VisitableDirectoryTree;
 
+import java.nio.file.Path;
+
 /**
  * Used to build a {@link FileCollectionSnapshot} by collecting normalized file snapshots.
  */
@@ -36,8 +38,8 @@ public class FileCollectionVisitingSnapshotBuilder implements VisitingFileCollec
     public void visitFileTreeSnapshot(VisitableDirectoryTree tree) {
         tree.visit(new PhysicalFileTreeVisitor() {
             @Override
-            public void visit(String basePath, String name, Iterable<String> relativePath, FileContentSnapshot content) {
-                builder.collectFileSnapshot(FileSnapshotHelper.create(basePath, relativePath, content));
+            public void visit(Path path, String basePath, String name, Iterable<String> relativePath, FileContentSnapshot content) {
+                builder.collectFileSnapshot(FileSnapshotHelper.create(path, relativePath, content));
             }
         });
     }

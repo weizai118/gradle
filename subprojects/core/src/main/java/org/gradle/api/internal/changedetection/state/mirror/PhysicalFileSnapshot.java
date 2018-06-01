@@ -19,14 +19,18 @@ package org.gradle.api.internal.changedetection.state.mirror;
 import org.gradle.api.internal.changedetection.state.FileHashSnapshot;
 import org.gradle.internal.hash.HashCode;
 
+import java.nio.file.Path;
 import java.util.Deque;
 
+@SuppressWarnings("Since15")
 public class PhysicalFileSnapshot implements PhysicalSnapshot {
     private final HashCode hash;
     private final long timestamp;
+    private final Path path;
     private final String name;
 
-    public PhysicalFileSnapshot(String name, long lastModified, HashCode contentMd5) {
+    public PhysicalFileSnapshot(Path path, String name, long lastModified, HashCode contentMd5) {
+        this.path = path;
         this.name = name;
         this.timestamp = lastModified;
         this.hash = contentMd5;
@@ -38,6 +42,10 @@ public class PhysicalFileSnapshot implements PhysicalSnapshot {
             return this;
         }
         return null;
+    }
+
+    public Path getPath() {
+        return path;
     }
 
     @Override
@@ -59,7 +67,7 @@ public class PhysicalFileSnapshot implements PhysicalSnapshot {
 
     @Override
     public void visitSelf(PhysicalFileVisitor visitor, Deque<String> relativePath) {
-        visitor.visit(name, relativePath, new FileHashSnapshot(hash, timestamp));
+        visitor.visit(path, name, relativePath, new FileHashSnapshot(hash, timestamp));
     }
 
     public HashCode getHash() {

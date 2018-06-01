@@ -18,6 +18,9 @@ package org.gradle.api.internal.changedetection.state.mirror;
 
 import org.gradle.api.internal.changedetection.state.FileContentSnapshot;
 
+import java.nio.file.Path;
+
+@SuppressWarnings("Since15")
 public interface PhysicalFileTreeVisitor {
-    void visit(String basePath, String name, Iterable<String> relativePath, FileContentSnapshot content);
+    void visit(Path path, String basePath, String name, Iterable<String> relativePath, FileContentSnapshot content);
 }

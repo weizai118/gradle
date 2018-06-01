@@ -20,8 +20,10 @@ import org.apache.commons.lang.StringUtils;
 
 import javax.annotation.Nullable;
 import java.io.File;
+import java.nio.file.Paths;
 import java.util.concurrent.ConcurrentHashMap;
 
+@SuppressWarnings("Since15")
 public class PhysicalSnapshotRoot {
     private static final String FILE_PATH_SEPARATORS = File.separatorChar != '/' ? ("/" + File.separator) : File.separator;
 
@@ -46,7 +48,7 @@ public class PhysicalSnapshotRoot {
             if (segments.length == 1) {
                 newChild = snapshot;
             } else {
-                newChild = new PhysicalDirectorySnapshot(currentSegment);
+                newChild = new PhysicalDirectorySnapshot(Paths.get(currentSegment), currentSegment);
             }
             child = children.putIfAbsent(currentSegment, newChild);
             if (child == null) {

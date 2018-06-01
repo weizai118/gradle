@@ -28,6 +28,8 @@ import org.gradle.test.fixtures.file.TestNameTestDirectoryProvider
 import org.junit.Rule
 import spock.lang.Specification
 
+import java.nio.file.Path
+
 class DefaultFileSystemSnapshotterTest extends Specification {
     @Rule TestNameTestDirectoryProvider tmpDir = new TestNameTestDirectoryProvider()
     def fileHasher = new TestFileHasher()
@@ -181,7 +183,7 @@ class DefaultFileSystemSnapshotterTest extends Specification {
         def paths = [] as Set
         snapshot.visit(new PhysicalFileTreeVisitor() {
             @Override
-            void visit(String basePath, String name, Iterable<String> relativePath, FileContentSnapshot content) {
+            void visit(Path path, String basePath, String name, Iterable<String> relativePath, FileContentSnapshot content) {
                 paths << relativePath.join('/')
             }
         })
@@ -212,7 +214,7 @@ class DefaultFileSystemSnapshotterTest extends Specification {
         getTreeInfo(snapshot) == [d.absolutePath, 1]
         snapshot.visit(new PhysicalFileTreeVisitor() {
             @Override
-            void visit(String basePath, String name, Iterable<String> relativePath, FileContentSnapshot content) {
+            void visit(Path path, String basePath, String name, Iterable<String> relativePath, FileContentSnapshot content) {
                 assert basePath == d.absolutePath
                 assert name == d.name
                 assert relativePath as List == [d.name]
@@ -302,15 +304,15 @@ class DefaultFileSystemSnapshotterTest extends Specification {
     }
 
     private static List getTreeInfo(VisitableDirectoryTree tree) {
-        String path = null
+        String rootPath = null
         int count = 0
         tree.visit(new PhysicalFileTreeVisitor() {
             @Override
-            void visit(String basePath, String name, Iterable<String> relativePath, FileContentSnapshot content) {
-                path = basePath
+            void visit(Path path, String basePath, String name, Iterable<String> relativePath, FileContentSnapshot content) {
+                rootPath = basePath
                 count++
             }
         })
-        return [path, count]
+        return [rootPath, count]
     }
 }

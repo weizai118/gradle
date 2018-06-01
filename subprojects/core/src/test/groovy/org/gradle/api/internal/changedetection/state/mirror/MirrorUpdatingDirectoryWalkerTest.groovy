@@ -24,6 +24,8 @@ import org.gradle.util.UsesNativeServices
 import org.junit.Rule
 import spock.lang.Specification
 
+import java.nio.file.Path
+
 @UsesNativeServices
 class MirrorUpdatingDirectoryWalkerTest extends Specification {
     @Rule
@@ -48,13 +50,13 @@ class MirrorUpdatingDirectoryWalkerTest extends Specification {
 
         def visited = []
 
-        def root = new PhysicalDirectorySnapshot("some")
+        def root = new PhysicalDirectorySnapshot(rootDir.toPath(), "some")
         when:
         walker.walkDir(rootDir.toPath(), root)
         root.visitTree(new PhysicalFileVisitor() {
             @Override
-            void visit(String name, Iterable<String> relativePath, FileContentSnapshot content) {
-                visited << new File(rootDir, relativePath.join("/")).absolutePath
+            void visit(Path path, String name, Iterable<String> relativePath, FileContentSnapshot content) {
+                visited << path.toString()
             }
         }, new ArrayDeque<String>())
 
