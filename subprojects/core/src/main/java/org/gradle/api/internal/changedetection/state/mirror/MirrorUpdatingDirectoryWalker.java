@@ -98,7 +98,7 @@ public class MirrorUpdatingDirectoryWalker {
 
                 private PhysicalDirectorySnapshot getDirectorySnapshot(Path dir) {
                     String name = dir.getFileName().toString();
-                    return getParentSnapshot().add(name, new PhysicalDirectorySnapshot(name));
+                    return getParentSnapshot().add(name, new PhysicalDirectorySnapshot(dir, name));
                 }
 
                 private PhysicalFileSnapshot getFileSnapshot(Path file, @Nullable BasicFileAttributes attrs) {
@@ -106,7 +106,7 @@ public class MirrorUpdatingDirectoryWalker {
                     String name = file.getFileName().toString();
                     DefaultFileMetadata metadata = new DefaultFileMetadata(FileType.RegularFile, attrs.lastModifiedTime().toMillis(), attrs.size());
                     HashCode hash = hasher.hash(file.toFile(), metadata);
-                    PhysicalFileSnapshot fileSnapshot = new PhysicalFileSnapshot(name, metadata.getLastModified(), hash);
+                    PhysicalFileSnapshot fileSnapshot = new PhysicalFileSnapshot(file, name, metadata.getLastModified(), hash);
                     return getParentSnapshot().add(name, fileSnapshot);
                 }
             });

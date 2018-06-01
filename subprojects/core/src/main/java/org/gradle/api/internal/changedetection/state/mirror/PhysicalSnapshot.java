@@ -17,11 +17,14 @@
 package org.gradle.api.internal.changedetection.state.mirror;
 
 import javax.annotation.Nullable;
+import java.nio.file.Path;
 import java.util.Deque;
 
+@SuppressWarnings("Since15")
 public interface PhysicalSnapshot {
     @Nullable
     PhysicalSnapshot find(String[] segments, int offset);
+    Path getPath();
     String getName();
     PhysicalSnapshot add(String[] segments, int offset, PhysicalSnapshot snapshot);
 

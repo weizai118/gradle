@@ -18,15 +18,21 @@ package org.gradle.api.internal.changedetection.state.mirror;
 
 import org.gradle.api.internal.changedetection.state.MissingFileContentSnapshot;
 
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.Arrays;
 import java.util.Deque;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
+@SuppressWarnings("Since15")
 public class PhysicalMissingFileSnapshot implements PhysicalSnapshot {
     private final ConcurrentMap<String, PhysicalSnapshot> children = new ConcurrentHashMap<String, PhysicalSnapshot>();
     private final String name;
+    private final Path path;
 
-    public PhysicalMissingFileSnapshot(String name) {
+    public PhysicalMissingFileSnapshot(Path path, String name) {
+        this.path = path;
         this.name = name;
     }
 
@@ -36,7 +42,13 @@ public class PhysicalMissingFileSnapshot implements PhysicalSnapshot {
             return this;
         }
         // children of missing files are missing - no snapshotting required.
-        return add(segments, offset, new PhysicalMissingFileSnapshot(segments[segments.length - 1]));
+        Path newPath = path.resolve(Paths.get(segments[0], Arrays.copyOfRange(segments, 1, segments.length)));
+        return add(segments, offset, new PhysicalMissingFileSnapshot(newPath, segments[segments.length - 1]));
+    }
+
+    @Override
+    public Path getPath() {
+        return path;
     }
 
     @Override
@@ -59,7 +71,7 @@ public class PhysicalMissingFileSnapshot implements PhysicalSnapshot {
             if (segments.length == offset + 1) {
                 newChild = snapshot;
             } else {
-                newChild = new PhysicalMissingFileSnapshot(currentSegment);
+                newChild = new PhysicalMissingFileSnapshot(path.resolve(currentSegment), currentSegment);
             }
             child = children.putIfAbsent(currentSegment, newChild);
             if (child == null) {
@@ -76,6 +88,6 @@ public class PhysicalMissingFileSnapshot implements PhysicalSnapshot {
 
     @Override
     public void visitSelf(PhysicalFileVisitor visitor, Deque<String> relativePath) {
-        visitor.visit(name, relativePath, MissingFileContentSnapshot.INSTANCE);
+        visitor.visit(path, name, relativePath, MissingFileContentSnapshot.INSTANCE);
     }
 }

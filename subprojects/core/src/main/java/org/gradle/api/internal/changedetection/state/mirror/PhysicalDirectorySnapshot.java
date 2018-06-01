@@ -20,16 +20,20 @@ import com.google.common.base.Preconditions;
 import org.gradle.api.internal.changedetection.state.DirContentSnapshot;
 import org.gradle.internal.Cast;
 
+import java.nio.file.Path;
 import java.util.Deque;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
+@SuppressWarnings("Since15")
 public class PhysicalDirectorySnapshot implements PhysicalSnapshot {
     private final ConcurrentMap<String, PhysicalSnapshot> children = new ConcurrentHashMap<String, PhysicalSnapshot>();
     private final String name;
+    private final Path path;
 
-    public PhysicalDirectorySnapshot(String name) {
+    public PhysicalDirectorySnapshot(Path path, String name) {
+        this.path = path;
         this.name = name;
     }
 
@@ -40,6 +44,10 @@ public class PhysicalDirectorySnapshot implements PhysicalSnapshot {
         }
         PhysicalSnapshot child = children.get(segments[offset]);
         return child != null ? child.find(segments, offset + 1) : null;
+    }
+
+    public Path getPath() {
+        return path;
     }
 
     @Override
@@ -59,7 +67,7 @@ public class PhysicalDirectorySnapshot implements PhysicalSnapshot {
             if (segments.length == offset + 1) {
                 newChild = snapshot;
             } else {
-                newChild = new PhysicalDirectorySnapshot(currentSegment);
+                newChild = new PhysicalDirectorySnapshot(path.resolve(currentSegment), currentSegment);
             }
             child = add(currentSegment, newChild);
         }
@@ -78,7 +86,7 @@ public class PhysicalDirectorySnapshot implements PhysicalSnapshot {
 
     @Override
     public void visitSelf(PhysicalFileVisitor visitor, Deque<String> relativePath) {
-        visitor.visit(name, relativePath, DirContentSnapshot.INSTANCE);
+        visitor.visit(path, name, relativePath, DirContentSnapshot.INSTANCE);
     }
 
     public <T extends PhysicalSnapshot> T add(String relativePath, T snapshot) {

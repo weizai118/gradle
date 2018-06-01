@@ -50,6 +50,7 @@ import org.gradle.normalization.internal.InputNormalizationStrategy;
 
 import java.io.File;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.List;
 
 /**
@@ -63,6 +64,7 @@ import java.util.List;
  *
  * The implementations are currently intentionally very, very simple, and so there are a number of ways in which they can be made much more efficient. This can happen over time.
  */
+@SuppressWarnings("Since15")
 @NonNullApi
 public class DefaultFileSystemSnapshotter implements FileSystemSnapshotter {
     private static final Joiner PATH_JOINER = Joiner.on(File.separatorChar);
@@ -174,18 +176,18 @@ public class DefaultFileSystemSnapshotter implements FileSystemSnapshotter {
                 tree.visitTreeOrBackingFile(new FileVisitor() {
                     @Override
                     public void visitDir(FileVisitDetails dirDetails) {
-                        visitor.visit(internPath(dirDetails.getFile()), dirDetails.getName(), RelativePath.EMPTY_ROOT, DirContentSnapshot.INSTANCE);
+                        visitor.visit(dirDetails.getFile().toPath(), internPath(dirDetails.getFile()), dirDetails.getName(), RelativePath.EMPTY_ROOT, DirContentSnapshot.INSTANCE);
                     }
 
                     @Override
                     public void visitFile(FileVisitDetails fileDetails) {
-                        String absolutePath = internPath(fileDetails.getFile());
+                        String basePath = internPath(fileDetails.getFile());
                         String relativePath = PATH_JOINER.join(fileDetails.getRelativePath());
-                        if (absolutePath.endsWith(relativePath) && (absolutePath.charAt(absolutePath.length() - relativePath.length() - 1) == File.separatorChar)) {
-                            absolutePath =  stringInterner.intern(absolutePath.substring(0, absolutePath.length() - relativePath.length() - 1));
-                            visitor.visit(absolutePath, fileDetails.getName(), fileDetails.getRelativePath(), fileSnapshot(fileDetails));
+                        if (basePath.endsWith(relativePath) && (basePath.charAt(basePath.length() - relativePath.length() - 1) == File.separatorChar)) {
+                            basePath =  stringInterner.intern(basePath.substring(0, basePath.length() - relativePath.length() - 1));
+                            visitor.visit(fileDetails.getFile().toPath(), basePath, fileDetails.getName(), fileDetails.getRelativePath(), fileSnapshot(fileDetails));
                         } else {
-                            visitor.visit(absolutePath, fileDetails.getName(), RelativePath.EMPTY_ROOT, fileSnapshot(fileDetails));
+                            visitor.visit(fileDetails.getFile().toPath(), basePath, fileDetails.getName(), RelativePath.EMPTY_ROOT, fileSnapshot(fileDetails));
                         }
                     }
                 });
@@ -204,12 +206,12 @@ public class DefaultFileSystemSnapshotter implements FileSystemSnapshotter {
             return new VisitableDirectoryTree() {
                 @Override
                 public void visit(PhysicalFileTreeVisitor visitor) {
-                    visitor.visit(path, fileSnapshot.getName(), ImmutableList.of(fileSnapshot.getName()), fileSnapshot.getContent());
+                    visitor.visit(Paths.get(fileSnapshot.getPath()), path, fileSnapshot.getName(), ImmutableList.of(fileSnapshot.getName()), fileSnapshot.getContent());
                 }
             };
         }
         Path rootPath = directoryTree.getDir().toPath();
-        PhysicalDirectorySnapshot rootDirectory = new PhysicalDirectorySnapshot(rootPath.getFileName().toString());
+        PhysicalDirectorySnapshot rootDirectory = new PhysicalDirectorySnapshot(rootPath, rootPath.getFileName().toString());
         mirrorUpdatingDirectoryWalker.walkDir(rootPath, rootDirectory);
         VisitableDirectoryTree visitableDir = new PhysicalSnapshotBackedVisitableTree(path, rootDirectory);
         fileSystemMirror.putDirectory(path, visitableDir);
@@ -237,9 +239,9 @@ public class DefaultFileSystemSnapshotter implements FileSystemSnapshotter {
             public void visit(final PhysicalFileTreeVisitor visitor) {
                 snapshot.visit(new PhysicalFileTreeVisitor() {
                     @Override
-                    public void visit(String basePath, String name, Iterable<String> relativePath, FileContentSnapshot content) {
-                        if (spec.isSatisfiedBy(new SnapshotFileTreeElement(FileSnapshotHelper.create(basePath, relativePath, content), fileSystem))) {
-                            visitor.visit(basePath, name, relativePath, content);
+                    public void visit(Path path, String basePath, String name, Iterable<String> relativePath, FileContentSnapshot content) {
+                        if (spec.isSatisfiedBy(new SnapshotFileTreeElement(FileSnapshotHelper.create(path, relativePath, content), fileSystem))) {
+                            visitor.visit(path, basePath, name, relativePath, content);
                         }
                     }
                 });

@@ -30,7 +30,9 @@ import org.gradle.internal.file.FileType;
 import org.gradle.internal.hash.HashCode;
 
 import javax.annotation.Nullable;
+import java.nio.file.Path;
 
+@SuppressWarnings("Since15")
 public abstract class AbstractClasspathSnapshotBuilder implements VisitingFileCollectionSnapshotBuilder {
     private static final Logger LOGGER = Logging.getLogger(AbstractClasspathSnapshotBuilder.class);
 
@@ -67,10 +69,10 @@ public abstract class AbstractClasspathSnapshotBuilder implements VisitingFileCo
         final ClasspathEntrySnapshotBuilder entryResourceCollectionBuilder = newClasspathEntrySnapshotBuilder();
         tree.visit(new PhysicalFileTreeVisitor() {
             @Override
-            public void visit(String basePath, String name, Iterable<String> relativePath, FileContentSnapshot content) {
+            public void visit(Path path, String basePath, String name, Iterable<String> relativePath, FileContentSnapshot content) {
                 if (content.getType() == FileType.RegularFile) {
                     RegularFileSnapshot fileSnapshot = Cast.uncheckedCast(FileSnapshotHelper.create(
-                        basePath,
+                        path,
                         relativePath,
                         content
                     ));

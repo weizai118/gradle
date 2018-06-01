@@ -19,11 +19,13 @@ package org.gradle.api.internal.changedetection.state;
 import org.gradle.api.NonNullApi;
 import org.gradle.api.internal.changedetection.state.mirror.PhysicalFileTreeVisitor;
 
+import java.nio.file.Paths;
 import java.util.Collection;
 
 /**
  * Represents the state of a directory tree.
  */
+@SuppressWarnings("Since15")
 @NonNullApi
 public class DirectoryTreeDetails implements FileTreeSnapshot {
     // Interned path
@@ -54,7 +56,7 @@ public class DirectoryTreeDetails implements FileTreeSnapshot {
     @Override
     public void visit(PhysicalFileTreeVisitor visitor) {
         for (FileSnapshot descendant : descendants) {
-            visitor.visit(path, descendant.getName(), descendant.getRelativePath(), descendant.getContent());
+            visitor.visit(Paths.get(descendant.getPath()), path, descendant.getName(), descendant.getRelativePath(), descendant.getContent());
         }
     }
 }
