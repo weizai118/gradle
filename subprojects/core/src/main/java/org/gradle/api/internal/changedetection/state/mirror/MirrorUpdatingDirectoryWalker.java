@@ -87,7 +87,7 @@ public class MirrorUpdatingDirectoryWalker {
                         throw new GradleException(String.format("Could not read directory path '%s'.", dir), exc);
                     }
                     if (!dir.equals(rootPath)) {
-                        relativePathHolder.pop();
+                        relativePathHolder.removeLast();
                     }
                     return FileVisitResult.CONTINUE;
                 }
