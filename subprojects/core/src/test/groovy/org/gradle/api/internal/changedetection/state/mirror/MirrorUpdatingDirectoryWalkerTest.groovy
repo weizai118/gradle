@@ -39,6 +39,7 @@ class MirrorUpdatingDirectoryWalkerTest extends Specification {
         def rootDir = tmpDir.createDir("root")
         def rootTextFile = rootDir.file("a.txt").createFile()
         def nestedTextFile = rootDir.file("a/b/c.txt").createFile()
+        def nestedSiblingTextFile = rootDir.file("a/c/c.txt").createFile()
         def notTextFile = rootDir.file("a/b/c.html").createFile()
         def excludedFile = rootDir.file("subdir1/a/b/c.html").createFile()
         def notUnderRoot = tmpDir.createDir("root2").file("a.txt").createFile()
@@ -49,6 +50,7 @@ class MirrorUpdatingDirectoryWalkerTest extends Specification {
         patterns.exclude("subdir1/**")
 
         def visited = []
+        def relativePaths = []
 
         def root = new PhysicalDirectorySnapshot(rootDir.toPath(), "some")
         when:
@@ -57,6 +59,7 @@ class MirrorUpdatingDirectoryWalkerTest extends Specification {
             @Override
             void visit(Path path, String name, Iterable<String> relativePath, FileContentSnapshot content) {
                 visited << path.toString()
+                relativePaths << relativePath.join("/")
             }
         }, new ArrayDeque<String>())
 
@@ -64,9 +67,17 @@ class MirrorUpdatingDirectoryWalkerTest extends Specification {
         visited.contains(rootTextFile.absolutePath)
         visited.contains(rootTextFile.absolutePath)
         visited.contains(nestedTextFile.absolutePath)
+        visited.contains(nestedSiblingTextFile.absolutePath)
         visited.contains(notTextFile.absolutePath)
         visited.contains(excludedFile.absolutePath)
         !visited.contains(notUnderRoot.absolutePath)
         !visited.contains(doesNotExist.absolutePath)
+        relativePaths as Set == [
+            'a',
+            'a/b', 'a/b/c.txt',
+            'a/c', 'a/c/c.txt', 'a/b/c.html',
+            'subdir1', 'subdir1/a', 'subdir1/a/b', 'subdir1/a/b/c.html',
+            'a.txt'
+        ] as Set
     }
 }
