@@ -53,6 +53,10 @@ For instance, `tasks.withType(SomeTask).name` would create a list of `String`s c
 
 Plugins or build scripts attempting to do this will now get a runtime exception.  The easiest fix is to explicitly use the [spread operator](http://docs.groovy-lang.org/latest/html/documentation/#_spread_operator).
 
+### Kotlin DSL breakages
+
+- `project.java.sourceSets` is now `project.sourceSets`
+
 ## External contributions
 
 We would like to thank the following community members for making contributions to this release of Gradle.
