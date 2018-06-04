@@ -17,42 +17,24 @@
 package org.gradle.api.internal.changedetection.state.mirror;
 
 import com.google.common.base.Preconditions;
-import org.gradle.api.internal.changedetection.state.DirContentSnapshot;
 import org.gradle.internal.Cast;
 
 import java.nio.file.Path;
-import java.util.Deque;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 @SuppressWarnings("Since15")
-public class PhysicalDirectorySnapshot implements PhysicalSnapshot {
+public class MutablePhysicalDirectorySnapshot extends AbstractPhysicalDirectorySnapshot {
     private final ConcurrentMap<String, PhysicalSnapshot> children = new ConcurrentHashMap<String, PhysicalSnapshot>();
-    private final String name;
-    private final Path path;
 
-    public PhysicalDirectorySnapshot(Path path, String name) {
-        this.path = path;
-        this.name = name;
+    public MutablePhysicalDirectorySnapshot(Path path, String name) {
+        super(path, name);
     }
 
     @Override
-    public PhysicalSnapshot find(String[] segments, int offset) {
-        if (segments.length == offset) {
-            return this;
-        }
-        PhysicalSnapshot child = children.get(segments[offset]);
-        return child != null ? child.find(segments, offset + 1) : null;
-    }
-
-    public Path getPath() {
-        return path;
-    }
-
-    @Override
-    public String getName() {
-        return name;
+    protected Map<String, PhysicalSnapshot> getChildren() {
+        return children;
     }
 
     @Override
@@ -67,26 +49,11 @@ public class PhysicalDirectorySnapshot implements PhysicalSnapshot {
             if (segments.length == offset + 1) {
                 newChild = snapshot;
             } else {
-                newChild = new PhysicalDirectorySnapshot(path.resolve(currentSegment), currentSegment);
+                newChild = new MutablePhysicalDirectorySnapshot(getPath().resolve(currentSegment), currentSegment);
             }
             child = add(currentSegment, newChild);
         }
         return child.add(segments, offset + 1, snapshot);
-    }
-
-    @Override
-    public void visitTree(PhysicalFileVisitor visitor, Deque<String> relativePath) {
-        for (Map.Entry<String, PhysicalSnapshot> entry : children.entrySet()) {
-            relativePath.addLast(entry.getKey());
-            entry.getValue().visitSelf(visitor, relativePath);
-            entry.getValue().visitTree(visitor, relativePath);
-            relativePath.removeLast();
-        }
-    }
-
-    @Override
-    public void visitSelf(PhysicalFileVisitor visitor, Deque<String> relativePath) {
-        visitor.visit(path, name, relativePath, DirContentSnapshot.INSTANCE);
     }
 
     public <T extends PhysicalSnapshot> T add(String relativePath, T snapshot) {
