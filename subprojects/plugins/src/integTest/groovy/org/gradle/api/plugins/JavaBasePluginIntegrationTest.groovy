@@ -65,7 +65,7 @@ class JavaBasePluginIntegrationTest extends AbstractIntegrationSpec {
             }
             compileUnitTestJava {
                 options.fork = true
-                options.forkOptions.executable = file('${jdk.javacExecutable.toURI()}')
+                options.forkOptions.javaHome = file('${jdk.javaHome}')
             }
             compileUnitTestJava.doFirst {
                 assert sourceCompatibility == "1.7"
