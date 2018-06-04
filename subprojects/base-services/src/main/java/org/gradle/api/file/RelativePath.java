@@ -34,7 +34,7 @@ import java.util.ListIterator;
  */
 public class RelativePath implements Serializable, Comparable<RelativePath>, CharSequence, Iterable<String> {
     public static final RelativePath EMPTY_ROOT = new RelativePath(false);
-    private static final StringInterner PATH_SEGMENT_STRING_INTERNER = new StringInterner();
+    public static final StringInterner PATH_SEGMENT_STRING_INTERNER = new StringInterner();
     private static final String FILE_PATH_SEPARATORS = File.separatorChar != '/' ? ("/" + File.separator) : File.separator;
     private final boolean endsWithFile;
     private final String[] segments;

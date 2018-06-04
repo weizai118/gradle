@@ -19,6 +19,7 @@ package org.gradle.api.internal.changedetection.state.mirror;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import org.gradle.api.GradleException;
+import org.gradle.api.file.RelativePath;
 import org.gradle.internal.file.FileType;
 import org.gradle.internal.hash.FileHasher;
 import org.gradle.internal.hash.HashCode;
@@ -56,7 +57,8 @@ public class MirrorUpdatingDirectoryWalker {
                 @Override
                 public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) {
                     levelHolder.addLast(ImmutableMap.<String, PhysicalSnapshot>builder());
-                    relativePathHolder.addLast(dir.getFileName().toString());
+                    String name = internedName(dir);
+                    relativePathHolder.addLast(name);
                     return FileVisitResult.CONTINUE;
                 }
 
@@ -101,11 +103,15 @@ public class MirrorUpdatingDirectoryWalker {
 
                 private void addFileSnapshot(Path file, @Nullable BasicFileAttributes attrs) {
                     Preconditions.checkNotNull(attrs, "Unauthorized access to %", file);
-                    String name = file.getFileName().toString();
+                    String name = internedName(file);
                     DefaultFileMetadata metadata = new DefaultFileMetadata(FileType.RegularFile, attrs.lastModifiedTime().toMillis(), attrs.size());
                     HashCode hash = hasher.hash(file.toFile(), metadata);
                     PhysicalFileSnapshot fileSnapshot = new PhysicalFileSnapshot(file, name, metadata.getLastModified(), hash);
                     levelHolder.peekLast().put(name, fileSnapshot);
+                }
+
+                private String internedName(Path dir) {
+                    return RelativePath.PATH_SEGMENT_STRING_INTERNER.intern(dir.getFileName().toString());
                 }
             });
         } catch (IOException e) {

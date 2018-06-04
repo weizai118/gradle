@@ -16,7 +16,6 @@
 
 package org.gradle.api.internal.changedetection.state;
 
-import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import org.gradle.api.internal.cache.StringInterner;
@@ -65,7 +64,8 @@ public enum InputPathNormalizationStrategy implements PathNormalizationStrategy 
         @Nullable
         @Override
         public NormalizedFileSnapshot getNormalizedSnapshot(Path path, Iterable<String> relativePath, FileContentSnapshot content, StringInterner stringInterner) {
-            return getRelativeSnapshot(path, content, Joiner.on("/").join(relativePath), stringInterner);
+            String relativePathString = getRelativePathString(relativePath);
+            return getRelativeSnapshot(path, content, relativePathString, stringInterner);
         }
 
         @Nullable
@@ -127,6 +127,22 @@ public enum InputPathNormalizationStrategy implements PathNormalizationStrategy 
             return (content.getType() == FileType.Directory) ? null : new IgnoredPathFileSnapshot(content);
         }
     };
+
+    private static String getRelativePathString(Iterable<String> relativePath) {
+        if (Iterables.isEmpty(relativePath)) {
+            return "";
+        }
+        StringBuilder builder = new StringBuilder(256);
+        int i = 0;
+        for (String segment : relativePath) {
+            if (i != 0) {
+                builder.append('/');
+            }
+            builder.append(segment);
+            i++;
+        }
+        return builder.toString();
+    }
 
     public static InputPathNormalizationStrategy valueOf(PathSensitivity pathSensitivity) {
         switch (pathSensitivity) {
