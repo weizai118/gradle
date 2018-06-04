@@ -52,9 +52,8 @@ class MirrorUpdatingDirectoryWalkerTest extends Specification {
         def visited = []
         def relativePaths = []
 
-        def root = new PhysicalDirectorySnapshot(rootDir.toPath(), "some")
         when:
-        walker.walkDir(rootDir.toPath(), root)
+        def root = walker.walkDir(rootDir.toPath())
         root.visitTree(new PhysicalFileVisitor() {
             @Override
             void visit(Path path, String name, Iterable<String> relativePath, FileContentSnapshot content) {

@@ -24,7 +24,7 @@ import java.util.ArrayDeque;
 @SuppressWarnings("Since15")
 public class PhysicalSnapshotBackedVisitableTree implements VisitableDirectoryTree {
     private final String basePath;
-    private final PhysicalDirectorySnapshot rootDirectory;
+    private final PhysicalSnapshot rootDirectory;
 
     public static final VisitableDirectoryTree EMPTY = new VisitableDirectoryTree() {
         @Override
@@ -32,7 +32,7 @@ public class PhysicalSnapshotBackedVisitableTree implements VisitableDirectoryTr
         }
     };
 
-    public PhysicalSnapshotBackedVisitableTree(String path, PhysicalDirectorySnapshot rootDirectory) {
+    public PhysicalSnapshotBackedVisitableTree(String path, PhysicalSnapshot rootDirectory) {
         this.rootDirectory = rootDirectory;
         this.basePath = path;
     }

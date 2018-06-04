@@ -17,6 +17,7 @@
 package org.gradle.api.internal.changedetection.state.mirror;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableMap;
 import org.gradle.api.GradleException;
 import org.gradle.internal.file.FileType;
 import org.gradle.internal.hash.FileHasher;
@@ -34,6 +35,7 @@ import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.EnumSet;
+import java.util.concurrent.atomic.AtomicReference;
 
 @SuppressWarnings("Since15")
 public class MirrorUpdatingDirectoryWalker {
@@ -44,23 +46,18 @@ public class MirrorUpdatingDirectoryWalker {
         this.hasher = hasher;
     }
 
-    public void walkDir(final Path rootPath, final PhysicalDirectorySnapshot rootDirectory) {
-        final Deque<PhysicalDirectorySnapshot> relativePathHolder = new ArrayDeque<PhysicalDirectorySnapshot>();
+    public ImmutablePhysicalDirectorySnapshot walkDir(final Path rootPath) {
+        final Deque<String> relativePathHolder = new ArrayDeque<String>();
+        final Deque<ImmutableMap.Builder<String, PhysicalSnapshot>> levelHolder = new ArrayDeque<ImmutableMap.Builder<String, PhysicalSnapshot>>();
+        final AtomicReference<ImmutablePhysicalDirectorySnapshot> result = new AtomicReference<ImmutablePhysicalDirectorySnapshot>();
 
         try {
             Files.walkFileTree(rootPath, EnumSet.of(FileVisitOption.FOLLOW_LINKS), Integer.MAX_VALUE, new java.nio.file.FileVisitor<Path>() {
                 @Override
                 public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) {
-                    if (dir.equals(rootPath)) {
-                        return FileVisitResult.CONTINUE;
-                    }
-                    PhysicalDirectorySnapshot snapshot = getDirectorySnapshot(dir);
-                    relativePathHolder.addLast(snapshot);
+                    levelHolder.addLast(ImmutableMap.<String, PhysicalSnapshot>builder());
+                    relativePathHolder.addLast(dir.getFileName().toString());
                     return FileVisitResult.CONTINUE;
-                }
-
-                private PhysicalDirectorySnapshot getParentSnapshot() {
-                    return relativePathHolder.isEmpty() ? rootDirectory : relativePathHolder.peekLast();
                 }
 
                 @Override
@@ -69,7 +66,7 @@ public class MirrorUpdatingDirectoryWalker {
                         // when FileVisitOption.FOLLOW_LINKS, we only get here when link couldn't be followed
                         throw new GradleException(String.format("Could not list contents of '%s'. Couldn't follow symbolic link.", file));
                     }
-                    getFileSnapshot(file, attrs);
+                    addFileSnapshot(file, attrs);
                     return FileVisitResult.CONTINUE;
                 }
 
@@ -86,8 +83,14 @@ public class MirrorUpdatingDirectoryWalker {
                     if (isNotFileSystemLoopException(exc)) {
                         throw new GradleException(String.format("Could not read directory path '%s'.", dir), exc);
                     }
-                    if (!dir.equals(rootPath)) {
-                        relativePathHolder.removeLast();
+                    String directoryPath = relativePathHolder.removeLast();
+                    ImmutableMap.Builder<String, PhysicalSnapshot> builder = levelHolder.removeLast();
+                    ImmutablePhysicalDirectorySnapshot directorySnapshot = new ImmutablePhysicalDirectorySnapshot(dir, directoryPath, builder.build());
+                    ImmutableMap.Builder<String, PhysicalSnapshot> parentBuilder = levelHolder.peekLast();
+                    if (parentBuilder != null) {
+                        parentBuilder.put(directoryPath, directorySnapshot);
+                    } else {
+                        result.set(directorySnapshot);
                     }
                     return FileVisitResult.CONTINUE;
                 }
@@ -96,23 +99,19 @@ public class MirrorUpdatingDirectoryWalker {
                     return e != null && !(e instanceof FileSystemLoopException);
                 }
 
-                private PhysicalDirectorySnapshot getDirectorySnapshot(Path dir) {
-                    String name = dir.getFileName().toString();
-                    return getParentSnapshot().add(name, new PhysicalDirectorySnapshot(dir, name));
-                }
-
-                private PhysicalFileSnapshot getFileSnapshot(Path file, @Nullable BasicFileAttributes attrs) {
+                private void addFileSnapshot(Path file, @Nullable BasicFileAttributes attrs) {
                     Preconditions.checkNotNull(attrs, "Unauthorized access to %", file);
                     String name = file.getFileName().toString();
                     DefaultFileMetadata metadata = new DefaultFileMetadata(FileType.RegularFile, attrs.lastModifiedTime().toMillis(), attrs.size());
                     HashCode hash = hasher.hash(file.toFile(), metadata);
                     PhysicalFileSnapshot fileSnapshot = new PhysicalFileSnapshot(file, name, metadata.getLastModified(), hash);
-                    return getParentSnapshot().add(name, fileSnapshot);
+                    levelHolder.peekLast().put(name, fileSnapshot);
                 }
             });
         } catch (IOException e) {
             throw new GradleException(String.format("Could not list contents of directory '%s'.", rootPath), e);
         }
+        return result.get();
     }
 
 }

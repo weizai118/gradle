@@ -48,7 +48,7 @@ public class PhysicalSnapshotRoot {
             if (segments.length == 1) {
                 newChild = snapshot;
             } else {
-                newChild = new PhysicalDirectorySnapshot(Paths.get(currentSegment), currentSegment);
+                newChild = new MutablePhysicalDirectorySnapshot(Paths.get(currentSegment), currentSegment);
             }
             child = children.putIfAbsent(currentSegment, newChild);
             if (child == null) {

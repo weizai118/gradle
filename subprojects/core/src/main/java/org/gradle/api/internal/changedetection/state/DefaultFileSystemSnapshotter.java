@@ -26,8 +26,8 @@ import org.gradle.api.file.FileVisitor;
 import org.gradle.api.file.RelativePath;
 import org.gradle.api.internal.cache.StringInterner;
 import org.gradle.api.internal.changedetection.state.mirror.FileSnapshotHelper;
+import org.gradle.api.internal.changedetection.state.mirror.ImmutablePhysicalDirectorySnapshot;
 import org.gradle.api.internal.changedetection.state.mirror.MirrorUpdatingDirectoryWalker;
-import org.gradle.api.internal.changedetection.state.mirror.PhysicalDirectorySnapshot;
 import org.gradle.api.internal.changedetection.state.mirror.PhysicalFileTreeVisitor;
 import org.gradle.api.internal.changedetection.state.mirror.PhysicalSnapshotBackedVisitableTree;
 import org.gradle.api.internal.changedetection.state.mirror.VisitableDirectoryTree;
@@ -211,8 +211,7 @@ public class DefaultFileSystemSnapshotter implements FileSystemSnapshotter {
             };
         }
         Path rootPath = directoryTree.getDir().toPath();
-        PhysicalDirectorySnapshot rootDirectory = new PhysicalDirectorySnapshot(rootPath, rootPath.getFileName().toString());
-        mirrorUpdatingDirectoryWalker.walkDir(rootPath, rootDirectory);
+        ImmutablePhysicalDirectorySnapshot rootDirectory = mirrorUpdatingDirectoryWalker.walkDir(rootPath);
         VisitableDirectoryTree visitableDir = new PhysicalSnapshotBackedVisitableTree(path, rootDirectory);
         fileSystemMirror.putDirectory(path, visitableDir);
         return visitableDir;
