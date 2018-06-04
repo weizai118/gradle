@@ -63,7 +63,10 @@ class JavaBasePluginIntegrationTest extends AbstractIntegrationSpec {
             sourceSets { 
                 unitTest { } 
             }
-            compileUnitTestJava.options.forkOptions.executable = file('${jdk.javacExecutable.toURI()}')
+            compileUnitTestJava {
+                options.fork = true
+                options.forkOptions.executable = file('${jdk.javacExecutable.toURI()}')
+            }
             compileUnitTestJava.doFirst {
                 assert sourceCompatibility == "1.7"
                 assert targetCompatibility == "1.8"
