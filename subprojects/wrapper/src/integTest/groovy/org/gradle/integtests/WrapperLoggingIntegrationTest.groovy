@@ -30,20 +30,21 @@ class WrapperLoggingIntegrationTest extends AbstractWrapperIntegrationSpec {
     def "wrapper only renders welcome message when executed in quiet mode"() {
         given:
         prepareWrapper()
+        def welcomeMessage = "Welcome to Gradle $wrapperExecuter.distribution.version.version!"
 
         when:
         args '-q'
         result = wrapperExecuter.withTasks("emptyTask").run()
 
         then:
-        outputContains("Welcome to Gradle $wrapperExecuter.distribution.version.version!")
+        outputContains(welcomeMessage)
 
         when:
         args '-q'
         result = wrapperExecuter.withTasks("emptyTask").run()
 
         then:
-        result.output.empty
+        outputDoesNotContain(welcomeMessage)
     }
 
     @Requires(TestPrecondition.NOT_WINDOWS)
