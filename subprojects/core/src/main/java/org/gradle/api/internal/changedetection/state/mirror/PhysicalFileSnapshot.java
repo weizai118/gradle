@@ -70,6 +70,11 @@ public class PhysicalFileSnapshot implements PhysicalSnapshot {
         visitor.visit(path, name, relativePath, new FileHashSnapshot(hash, timestamp));
     }
 
+    @Override
+    public void visit(HierarchicalFileTreeVisitor visitor) {
+        visitor.visit(path, name, new FileHashSnapshot(hash, timestamp));
+    }
+
     public HashCode getHash() {
         return hash;
     }

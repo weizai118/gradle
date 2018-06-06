@@ -90,4 +90,9 @@ public class PhysicalMissingFileSnapshot implements PhysicalSnapshot {
     public void visitSelf(PhysicalFileVisitor visitor, Deque<String> relativePath) {
         visitor.visit(path, name, relativePath, MissingFileContentSnapshot.INSTANCE);
     }
+
+    @Override
+    public void visit(HierarchicalFileTreeVisitor visitor) {
+
+    }
 }

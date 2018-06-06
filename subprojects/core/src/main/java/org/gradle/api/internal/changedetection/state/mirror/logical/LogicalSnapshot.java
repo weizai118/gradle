@@ -14,21 +14,8 @@
  * limitations under the License.
  */
 
-package org.gradle.api.internal.changedetection.state.mirror;
+package org.gradle.api.internal.changedetection.state.mirror.logical;
 
-import javax.annotation.Nullable;
-import java.nio.file.Path;
-import java.util.Deque;
-
-@SuppressWarnings("Since15")
-public interface PhysicalSnapshot {
-    @Nullable
-    PhysicalSnapshot find(String[] segments, int offset);
-    Path getPath();
-    String getName();
-    PhysicalSnapshot add(String[] segments, int offset, PhysicalSnapshot snapshot);
-
-    void visitTree(PhysicalFileVisitor visitor, Deque<String> relativePath);
-    void visitSelf(PhysicalFileVisitor visitor, Deque<String> relativePath);
-    void visit(HierarchicalFileTreeVisitor visitor);
+public interface LogicalSnapshot {
+    boolean accept(LogicalSnapshotVisitor logicalSnapshotVisitor);
 }

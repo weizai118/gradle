@@ -19,7 +19,6 @@ package org.gradle.api.internal.changedetection.state.mirror;
 import org.gradle.api.internal.changedetection.state.FileContentSnapshot;
 
 import java.nio.file.Path;
-import java.util.ArrayDeque;
 
 @SuppressWarnings("Since15")
 public class PhysicalSnapshotBackedVisitableTree implements VisitableDirectoryTree {
@@ -39,11 +38,19 @@ public class PhysicalSnapshotBackedVisitableTree implements VisitableDirectoryTr
 
     @Override
     public void visit(final PhysicalFileTreeVisitor visitor) {
-        rootDirectory.visitTree(new PhysicalFileVisitor() {
+        rootDirectory.visit(new PhysicalFileVisitor() {
             @Override
             public void visit(Path path, String name, Iterable<String> relativePath, FileContentSnapshot content) {
                 visitor.visit(path, basePath, name, relativePath, content);
             }
-        }, new ArrayDeque<String>());
+        });
+    }
+
+    public String getBasePath() {
+        return basePath;
+    }
+
+    public PhysicalSnapshot getRootDirectory() {
+        return rootDirectory;
     }
 }

@@ -54,13 +54,13 @@ class MirrorUpdatingDirectoryWalkerTest extends Specification {
 
         when:
         def root = walker.walkDir(rootDir.toPath())
-        root.visitTree(new PhysicalFileVisitor() {
+        root.visit(new PhysicalFileVisitor() {
             @Override
             void visit(Path path, String name, Iterable<String> relativePath, FileContentSnapshot content) {
                 visited << path.toString()
                 relativePaths << relativePath.join("/")
             }
-        }, new ArrayDeque<String>())
+        })
 
         then:
         visited.contains(rootTextFile.absolutePath)
