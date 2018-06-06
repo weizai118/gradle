@@ -108,17 +108,22 @@ public class DefaultFileLockContentionHandler implements FileLockContentionHandl
                         packet = communicator.receive();
                         lockId = communicator.decodeLockId(packet);
                     } catch (GracefullyStoppedException e) {
+                        System.out.println(System.currentTimeMillis() + ": GracefullyStoppedException: exiting " + Thread.currentThread().getName());
                         return;
                     }
+                    System.out.println(System.currentTimeMillis() + ": received packet for " + lockId);
 
                     lock.lock();
                     ContendedAction contendedAction = contendedActions.get(lockId);
                     if (contendedAction == null) {
+                        System.out.println(System.currentTimeMillis() + ": confirmed unlock request for lockId = [" + lockId + "], from port = [" + packet.getPort() + "]");
                         acceptConfirmationAsLockRequester(lockId, packet.getPort());
                     } else {
                         if (!contendedAction.running) {
+                            System.out.println(System.currentTimeMillis() + ": start lock release " + lockId);
                             startLockReleaseAsLockHolder(contendedAction);
                         }
+                        System.out.println(System.currentTimeMillis() + ": confirm unlock request " + lockId);
                         communicator.confirmUnlockRequest(packet);
                     }
                     lock.unlock();

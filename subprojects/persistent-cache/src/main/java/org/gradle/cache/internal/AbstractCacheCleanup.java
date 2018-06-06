@@ -37,18 +37,23 @@ public abstract class AbstractCacheCleanup implements CleanupAction {
 
     @Override
     public void clean(CleanableStore cleanableStore, CountdownTimer timer) {
+        System.out.println(System.currentTimeMillis() + ": AbstractCacheCleanup: starting - " + timer.getElapsedMillis());
         int filesDeleted = 0;
         for (File file : findEligibleFiles(cleanableStore)) {
+            System.out.println(System.currentTimeMillis() + ": AbstractCacheCleanup: processing " + file + " - " + timer.getElapsedMillis());
             if (timer.hasExpired()) {
                 LOGGER.warn("{} cleanup was aborted because timeout has expired", cleanableStore.getDisplayName());
                 break;
             }
             if (shouldDelete(file)) {
+                System.out.println(System.currentTimeMillis() + ": AbstractCacheCleanup: deleting " + file + " - " + timer.getElapsedMillis());
                 if (FileUtils.deleteQuietly(file)) {
                     filesDeleted++;
                 }
             }
+            System.out.println(System.currentTimeMillis() + ": AbstractCacheCleanup: done processing " + file + " - " + timer.getElapsedMillis());
         }
+        System.out.println(System.currentTimeMillis() + ": AbstractCacheCleanup: done done - " + timer.getElapsedMillis());
         LOGGER.info("{} cleanup deleted {} files/directories.", cleanableStore.getDisplayName(), filesDeleted);
     }
 

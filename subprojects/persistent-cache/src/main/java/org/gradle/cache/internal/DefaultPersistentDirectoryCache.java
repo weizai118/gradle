@@ -142,11 +142,13 @@ public class DefaultPersistentDirectoryCache extends DefaultPersistentDirectoryS
         @Override
         public void cleanup() {
             if (cleanupAction != null) {
+                System.out.println(System.currentTimeMillis() + ": DefaultPersistentDirectoryCache.Cleanup.cleanup: starting for " + getDisplayName());
                 CountdownTimer timer = Time.startCountdownTimer(DEFAULT_CLEANUP_TIMEOUT_IN_SECONDS, TimeUnit.SECONDS);
                 cleanupAction.clean(DefaultPersistentDirectoryCache.this, timer);
                 if (!timer.hasExpired()) {
                     GFileUtils.touch(gcFile);
                 }
+                System.out.println(System.currentTimeMillis() + ": DefaultPersistentDirectoryCache.Cleanup.cleanup: finished in " + timer.getElapsed() + " for " + getDisplayName());
                 LOGGER.info("{} cleaned up in {}.", DefaultPersistentDirectoryCache.this, timer.getElapsed());
             }
         }
