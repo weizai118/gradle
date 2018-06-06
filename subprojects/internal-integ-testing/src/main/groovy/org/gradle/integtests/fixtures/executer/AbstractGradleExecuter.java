@@ -40,6 +40,7 @@ import org.gradle.internal.UncheckedException;
 import org.gradle.internal.featurelifecycle.LoggingDeprecatedFeatureHandler;
 import org.gradle.internal.jvm.Jvm;
 import org.gradle.internal.jvm.UnsupportedJavaRuntimeException;
+import org.gradle.internal.jvm.inspection.JvmVersionDetector;
 import org.gradle.internal.logging.LoggingManagerInternal;
 import org.gradle.internal.logging.services.DefaultLoggingManagerFactory;
 import org.gradle.internal.logging.services.LoggingServiceRegistry;
@@ -66,6 +67,7 @@ import java.io.PipedOutputStream;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -85,12 +87,16 @@ import static org.gradle.util.CollectionUtils.collect;
 import static org.gradle.util.CollectionUtils.join;
 
 public abstract class AbstractGradleExecuter implements GradleExecuter {
+
     protected static final ServiceRegistry GLOBAL_SERVICES = ServiceRegistryBuilder.builder()
         .displayName("Global services")
         .parent(newCommandLineProcessLogging())
         .parent(NativeServicesTestFixture.getInstance())
         .provider(new GlobalScopeServices(true))
         .build();
+
+    private static final JvmVersionDetector JVM_VERSION_DETECTOR = GLOBAL_SERVICES.get(JvmVersionDetector.class);
+
     protected final static Set<String> PROPAGATED_SYSTEM_PROPERTIES = Sets.newHashSet();
     private static final List<String> JDK7_PATHS = Arrays.asList("1.7", "jdk7", "-7-", "jdk-7", "7u");
 
@@ -530,7 +536,40 @@ public abstract class AbstractGradleExecuter implements GradleExecuter {
         if (isProfile()) {
             buildJvmOpts.add(profiler);
         }
+
+        buildJvmOpts.addAll(determineXmx());
+
+        if (gradleUserHomeDir != null) {
+            buildJvmOpts.add("-XX:+HeapDumpOnOutOfMemoryError");
+            buildJvmOpts.add("-XX:HeapDumpPath=" + gradleUserHomeDir.getAbsolutePath());
+        }
         return buildJvmOpts;
+    }
+
+    private List<String> determineXmx() {
+        if (xmxSpecified()) {
+            return Collections.emptyList();
+        }
+
+        List<String> result = new ArrayList<String>();
+        if (isSharedDaemons()) {
+            if (JVM_VERSION_DETECTOR.getJavaVersion(Jvm.forHome(getJavaHome())).compareTo(JavaVersion.VERSION_1_8) < 0) {
+                result.add("-XX:MaxPermSize=320m");
+            }
+            result.add("-Xmx2g");
+        } else {
+            result.add("-Xmx2g");
+        }
+        return result;
+    }
+
+    private boolean xmxSpecified() {
+        for (String arg : buildJvmOpts) {
+            if (arg.startsWith("-Xmx")) {
+                return true;
+            }
+        }
+        return false;
     }
 
     @Override
@@ -739,7 +778,7 @@ public abstract class AbstractGradleExecuter implements GradleExecuter {
     @Override
     public boolean isUseDaemon() {
         CliDaemonArgument cliDaemonArgument = resolveCliDaemonArgument();
-        if (cliDaemonArgument == NO_DAEMON) {
+        if (cliDaemonArgument == NO_DAEMON ||cliDaemonArgument == FOREGROUND) {
             return false;
         }
         return requireDaemon || cliDaemonArgument == DAEMON;
@@ -809,7 +848,7 @@ public abstract class AbstractGradleExecuter implements GradleExecuter {
         FOREGROUND
     }
 
-    private CliDaemonArgument resolveCliDaemonArgument() {
+    protected CliDaemonArgument resolveCliDaemonArgument() {
         for (int i = args.size() - 1; i >= 0; i--) {
             final String arg = args.get(i);
             if (arg.equals("--daemon")) {

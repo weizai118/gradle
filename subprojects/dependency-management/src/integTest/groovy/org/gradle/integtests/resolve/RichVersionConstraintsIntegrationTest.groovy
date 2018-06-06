@@ -103,7 +103,7 @@ class RichVersionConstraintsIntegrationTest extends AbstractModuleDependencyReso
 
         then:
         failure.assertHasCause("""Cannot find a version of 'org:foo' that satisfies the version constraints: 
-   Dependency path ':test:unspecified' --> 'org:foo' prefers '1.0', rejects '(1.0,)'
+   Dependency path ':test:unspecified' --> 'org:foo' prefers '1.0', rejects ']1.0,)'
    Dependency path ':test:unspecified' --> 'org:bar:1.0' --> 'org:foo' prefers '1.1'""")
 
     }
@@ -312,7 +312,7 @@ class RichVersionConstraintsIntegrationTest extends AbstractModuleDependencyReso
         then:
         failure.assertHasCause("""Cannot find a version of 'org:foo' that satisfies the version constraints: 
    Dependency path ':test:unspecified' --> 'org:foo' prefers '17'
-   Dependency path ':test:unspecified' --> 'test:other:unspecified' --> 'org:foo' prefers '15', rejects '(15,)'""")
+   Dependency path ':test:unspecified' --> 'test:other:unspecified' --> 'org:foo' prefers '15', rejects ']15,)'""")
 
     }
 
@@ -364,8 +364,8 @@ class RichVersionConstraintsIntegrationTest extends AbstractModuleDependencyReso
 
         then:
         failure.assertHasCause("""Cannot find a version of 'org:foo' that satisfies the version constraints: 
-   Dependency path ':test:unspecified' --> 'org:foo' prefers '17', rejects '(17,)'
-   Dependency path ':test:unspecified' --> 'test:other:unspecified' --> 'org:foo' prefers '15', rejects '(15,)'""")
+   Dependency path ':test:unspecified' --> 'org:foo' prefers '17', rejects ']17,)'
+   Dependency path ':test:unspecified' --> 'test:other:unspecified' --> 'org:foo' prefers '15', rejects ']15,)'""")
 
     }
 
@@ -420,8 +420,8 @@ class RichVersionConstraintsIntegrationTest extends AbstractModuleDependencyReso
 
         then:
         failure.assertHasCause("""Cannot find a version of 'org:foo' that satisfies the version constraints: 
-   Dependency path ':test:unspecified' --> 'org:foo' prefers '[15,16]', rejects '(16,)'
-   Dependency path ':test:unspecified' --> 'test:other:unspecified' --> 'org:foo' prefers '[17,18]', rejects '(18,)'""")
+   Dependency path ':test:unspecified' --> 'org:foo' prefers '[15,16]', rejects ']16,)'
+   Dependency path ':test:unspecified' --> 'test:other:unspecified' --> 'org:foo' prefers '[17,18]', rejects ']18,)'""")
 
     }
 
@@ -567,7 +567,7 @@ class RichVersionConstraintsIntegrationTest extends AbstractModuleDependencyReso
         then:
         resolve.expectGraph {
             root(":", ":test:") {
-                edge("org:foo:$notation", "org:foo:1.0")
+                edge("org:foo:$notation", "org:foo:1.0").byReason("rejected version 1.1")
             }
         }
 
@@ -656,7 +656,7 @@ class RichVersionConstraintsIntegrationTest extends AbstractModuleDependencyReso
         then:
         resolve.expectGraph {
             root(":", ":test:") {
-                edge("org:foo:[1.0,)", "org:foo:1.1")
+                edge("org:foo:[1.0,)", "org:foo:1.1").byReason("rejected versions 1.5, 1.4, 1.3, 1.2")
             }
         }
     }
@@ -738,7 +738,8 @@ class RichVersionConstraintsIntegrationTest extends AbstractModuleDependencyReso
         then:
         resolve.expectGraph {
             root(":", ":test:") {
-                edge("org:foo:$notation", "org:foo:1.$selected")
+                String rejectedVersions = (selected+1..5).collect { "1.${it}" }.reverse().join(", ")
+                edge("org:foo:$notation", "org:foo:1.$selected").byReason("rejected versions ${rejectedVersions}")
             }
         }
 
@@ -835,7 +836,7 @@ class RichVersionConstraintsIntegrationTest extends AbstractModuleDependencyReso
         then:
         failure.assertHasCause("""Cannot find a version of 'org:bar' that satisfies the version constraints: 
    Dependency path ':test:unspecified' --> 'org:bar' prefers '1'
-   Constraint path ':test:unspecified' --> 'org:bar' prefers '1', rejects '(1,)'
+   Constraint path ':test:unspecified' --> 'org:bar' prefers '1', rejects ']1,)'
    Dependency path ':test:unspecified' --> 'org:foo:2' --> 'org:bar' prefers '2'""")
     }
 
