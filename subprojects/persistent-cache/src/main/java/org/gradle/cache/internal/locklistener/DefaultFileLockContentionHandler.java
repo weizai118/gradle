@@ -16,6 +16,7 @@
 
 package org.gradle.cache.internal.locklistener;
 
+import org.gradle.cache.internal.ProcessMetaDataProvider;
 import org.gradle.internal.concurrent.ExecutorFactory;
 import org.gradle.internal.concurrent.ManagedExecutor;
 import org.gradle.internal.concurrent.Stoppable;
@@ -75,15 +76,17 @@ public class DefaultFileLockContentionHandler implements FileLockContentionHandl
 
     private final ExecutorFactory executorFactory;
     private final InetAddressFactory addressFactory;
+    private final ProcessMetaDataProvider metaDataProvider;
 
     private FileLockCommunicator communicator;
     private ManagedExecutor fileLockRequestListener;
     private ManagedExecutor unlockActionExecutor;
     private boolean stopped;
 
-    public DefaultFileLockContentionHandler(ExecutorFactory executorFactory, InetAddressFactory addressFactory) {
+    public DefaultFileLockContentionHandler(ExecutorFactory executorFactory, InetAddressFactory addressFactory, ProcessMetaDataProvider metaDataProvider) {
         this.executorFactory = executorFactory;
         this.addressFactory = addressFactory;
+        this.metaDataProvider = metaDataProvider;
     }
 
     private Runnable listener() {
@@ -108,22 +111,22 @@ public class DefaultFileLockContentionHandler implements FileLockContentionHandl
                         packet = communicator.receive();
                         lockId = communicator.decodeLockId(packet);
                     } catch (GracefullyStoppedException e) {
-                        System.out.println(System.currentTimeMillis() + ": GracefullyStoppedException: exiting " + Thread.currentThread().getName());
+                        System.out.println(metaDataProvider.getProcessIdentifier() + ":" + System.currentTimeMillis() + ": GracefullyStoppedException: exiting " + Thread.currentThread().getName());
                         return;
                     }
-                    System.out.println(System.currentTimeMillis() + ": received packet for " + lockId);
+                    System.out.println(metaDataProvider.getProcessIdentifier() + ":" + System.currentTimeMillis() + ": received packet for " + lockId);
 
                     lock.lock();
                     ContendedAction contendedAction = contendedActions.get(lockId);
                     if (contendedAction == null) {
-                        System.out.println(System.currentTimeMillis() + ": confirmed unlock request for lockId = [" + lockId + "], from port = [" + packet.getPort() + "]");
+                        System.out.println(metaDataProvider.getProcessIdentifier() + ":" + System.currentTimeMillis() + ": confirmed unlock request for lockId = [" + lockId + "], from port = [" + packet.getPort() + "]");
                         acceptConfirmationAsLockRequester(lockId, packet.getPort());
                     } else {
                         if (!contendedAction.running) {
-                            System.out.println(System.currentTimeMillis() + ": start lock release " + lockId);
+                            System.out.println(metaDataProvider.getProcessIdentifier() + ":" + System.currentTimeMillis() + ": start lock release " + lockId);
                             startLockReleaseAsLockHolder(contendedAction);
                         }
-                        System.out.println(System.currentTimeMillis() + ": confirm unlock request " + lockId);
+                        System.out.println(metaDataProvider.getProcessIdentifier() + ":" + System.currentTimeMillis() + ": confirm unlock request " + lockId);
                         communicator.confirmUnlockRequest(packet);
                     }
                     lock.unlock();

@@ -23,6 +23,7 @@ import org.gradle.cache.MultiProcessSafePersistentIndexedCache;
 import org.gradle.internal.Factory;
 
 import javax.annotation.Nullable;
+import java.util.UUID;
 
 /**
  * Applies cross-process file locking to a backing cache, to ensure that any in-memory and on file state is kept in sync while this process is read from or writing to the cache.
@@ -54,20 +55,33 @@ public class CrossProcessSynchronizingCache<K, V> implements MultiProcessSafePer
 
     @Override
     public V get(final K key, final Transformer<? extends V, ? super K> producer) {
-        Runnable runnable = cacheAccess.acquireFileLock();
+        Runnable runnable = getLock("get(" + key + ", transformer)");
         return target.get(key, producer, runnable);
     }
 
     @Override
     public void put(K key, V value) {
-        Runnable runnable = cacheAccess.acquireFileLock();
+        Runnable runnable = getLock("put(" + key + ", " + value + ")");
         target.putLater(key, value, runnable);
     }
 
     @Override
     public void remove(K key) {
-        Runnable runnable = cacheAccess.acquireFileLock();
+        Runnable runnable = getLock("remove(" + key + ")");
         target.removeLater(key, runnable);
+    }
+
+    private Runnable getLock(final String method) {
+        final Runnable unlocker = cacheAccess.acquireFileLock();
+        final String uuid = UUID.randomUUID().toString();
+        System.out.println(System.currentTimeMillis() + ":" + uuid + ":CrossProcessSynchronizingCache: ACQUIRED method=" + method + " thread=" + Thread.currentThread().getName() + " threadId=" + Thread.currentThread().getId());
+        return new Runnable() {
+            @Override
+            public void run() {
+                unlocker.run();
+                System.out.println(System.currentTimeMillis() + ":" + uuid + ":CrossProcessSynchronizingCache RELEASED method=" + method + " thread=" + Thread.currentThread().getName() + " threadId=" + Thread.currentThread().getId());
+            }
+        };
     }
 
     @Override

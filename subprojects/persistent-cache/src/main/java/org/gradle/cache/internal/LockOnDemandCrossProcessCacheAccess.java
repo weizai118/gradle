@@ -26,6 +26,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.Lock;
 
 class LockOnDemandCrossProcessCacheAccess extends AbstractCrossProcessCacheAccess {
@@ -43,6 +44,7 @@ class LockOnDemandCrossProcessCacheAccess extends AbstractCrossProcessCacheAcces
     private FileLock fileLock;
     private CacheInitializationAction initAction;
     private boolean contended;
+    private final AtomicLong operationCounter = new AtomicLong();
 
     /**
      * Actions are notified when lock is opened or closed. Actions are called while holding state lock, so that no other threads are working with cache while these are running.
@@ -121,6 +123,7 @@ class LockOnDemandCrossProcessCacheAccess extends AbstractCrossProcessCacheAcces
             }
             lockCount++;
         } finally {
+            System.out.println(System.currentTimeMillis() + ":" + operationCounter.incrementAndGet() + ": increment() -> lockCount=" + lockCount + "  instance=" + this + " cache=" + cacheDisplayName + " fileLock=" + fileLock + " thread=" + Thread.currentThread().getName() + " threadId=" + Thread.currentThread().getId());
             stateLock.unlock();
         }
     }
@@ -136,6 +139,7 @@ class LockOnDemandCrossProcessCacheAccess extends AbstractCrossProcessCacheAcces
                 releaseLockIfHeld();
             } // otherwise, keep lock open
         } finally {
+            System.out.println(System.currentTimeMillis() + ":" + operationCounter.incrementAndGet() + ": decrement() -> lockCount=" + lockCount + "  instance=" + this + " cache=" + cacheDisplayName + " fileLock=" + fileLock + " thread=" + Thread.currentThread().getName() + " threadId=" + Thread.currentThread().getId());
             stateLock.unlock();
         }
     }
@@ -147,6 +151,7 @@ class LockOnDemandCrossProcessCacheAccess extends AbstractCrossProcessCacheAcces
         if (LOGGER.isDebugEnabled()) {
             LOGGER.debug("Releasing file lock for {}", cacheDisplayName);
         }
+        System.out.println(System.currentTimeMillis() + ":" + operationCounter.incrementAndGet() + ": releaseLockIfHeld(" + cacheDisplayName + ")");
         try {
             onClose.execute(fileLock);
         } finally {

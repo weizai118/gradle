@@ -27,12 +27,14 @@ import org.gradle.internal.id.LongIdGenerator
 import org.gradle.internal.remote.internal.inet.InetAddressFactory
 import org.gradle.test.fixtures.concurrent.ConcurrentSpec
 import org.gradle.test.fixtures.file.TestNameTestDirectoryProvider
+import org.junit.Ignore
 import org.junit.Rule
 import spock.lang.Unroll
 
 import static org.gradle.cache.FileLockManager.LockMode.Exclusive
 import static org.gradle.cache.FileLockManager.LockMode.Shared
 
+@Ignore
 class DefaultFileLockManagerContentionTest extends ConcurrentSpec {
     @Rule
     final TestNameTestDirectoryProvider tmpDir = new TestNameTestDirectoryProvider()

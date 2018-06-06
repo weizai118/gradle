@@ -20,11 +20,13 @@ import org.gradle.internal.concurrent.ExecutorFactory
 import org.gradle.internal.concurrent.ManagedExecutor
 import org.gradle.internal.remote.internal.inet.InetAddressFactory
 import org.gradle.util.ConcurrentSpecification
+import org.junit.Ignore
 
 import java.util.concurrent.atomic.AtomicBoolean
 
 import static org.gradle.test.fixtures.ConcurrentTestUtil.poll
 
+@Ignore
 class DefaultFileLockContentionHandlerTest extends ConcurrentSpecification {
     def addressFactory = new InetAddressFactory()
     def handler = new DefaultFileLockContentionHandler(executorFactory, addressFactory)

@@ -59,6 +59,7 @@ public class IndexedCacheBackedFileAccessTimeJournal implements FileAccessTimeJo
 
     @Override
     public void setLastAccessTime(File file, long millis) {
+        System.out.println(System.currentTimeMillis() + ": IndexedCacheBackedFileAccessTimeJournal.put(" + file + ", " + millis + ")");
         asyncCacheForWritingWhileCacheIsBeingAccessed.put(file, millis);
     }
 

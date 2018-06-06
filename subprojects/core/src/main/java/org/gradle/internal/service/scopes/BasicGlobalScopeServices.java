@@ -58,10 +58,11 @@ public class BasicGlobalScopeServices {
     }
 
 
-    DefaultFileLockContentionHandler createFileLockContentionHandler(ExecutorFactory executorFactory, InetAddressFactory inetAddressFactory) {
+    DefaultFileLockContentionHandler createFileLockContentionHandler(ExecutorFactory executorFactory, InetAddressFactory inetAddressFactory, ProcessEnvironment processEnvironment) {
         return new DefaultFileLockContentionHandler(
             executorFactory,
-            inetAddressFactory);
+            inetAddressFactory, new DefaultProcessMetaDataProvider(
+            processEnvironment));
     }
 
     ExecutorFactory createExecutorFactory() {

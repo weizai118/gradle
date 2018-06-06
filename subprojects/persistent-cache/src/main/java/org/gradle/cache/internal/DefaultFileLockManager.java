@@ -37,6 +37,7 @@ import org.gradle.internal.id.IdGenerator;
 import org.gradle.internal.id.RandomLongIdGenerator;
 import org.gradle.internal.time.CountdownTimer;
 import org.gradle.internal.time.Time;
+import org.gradle.internal.time.Timer;
 import org.gradle.util.GFileUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -45,6 +46,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Random;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArraySet;
 
 import static org.gradle.internal.UncheckedException.throwAsUncheckedException;
@@ -125,13 +127,14 @@ public class DefaultFileLockManager implements FileLockManager {
         private final long lockId;
 
         public DefaultFileLock(File target, LockOptions options, String displayName, String operationDisplayName, int port, Runnable whenContended) throws Throwable {
-            System.out.println(System.currentTimeMillis() + ": Creating DefaultFileLock with port " + port + " for " + target);
 
             this.port = port;
             this.lockId = generator.generateId();
             if (options.getMode() == LockMode.None) {
                 throw new UnsupportedOperationException("Locking mode None is not supported.");
             }
+
+            System.out.println(System.currentTimeMillis() + ": Creating DefaultFileLock with port " + port + " for " + target + " with lockId=" + lockId);
 
             this.target = target;
 
@@ -220,7 +223,7 @@ public class DefaultFileLockManager implements FileLockManager {
         }
 
         public void close() {
-            System.out.println(System.currentTimeMillis() + ": Closing DefaultFileLock with port " + port + " for " + target);
+            System.out.println(metaDataProvider.getProcessIdentifier() + ":" + System.currentTimeMillis() + ": Closing DefaultFileLock with port " + port + " for " + target + " with lockId=" + lockId);
             CompositeStoppable stoppable = new CompositeStoppable();
             stoppable.add(new Stoppable() {
                 public void stop() {
@@ -271,7 +274,7 @@ public class DefaultFileLockManager implements FileLockManager {
                 }
             });
             stoppable.stop();
-            System.out.println(System.currentTimeMillis() + ": Closed DefaultFileLock with port " + port + " for " + target);
+            System.out.println(metaDataProvider.getProcessIdentifier() + ":" + System.currentTimeMillis() + ": Closed DefaultFileLock with port " + port + " for " + target + " with lockId=" + lockId);
         }
 
         public LockMode getMode() {
@@ -279,11 +282,13 @@ public class DefaultFileLockManager implements FileLockManager {
         }
 
         private LockState lock(LockMode lockMode) throws Throwable {
+            Timer timer = Time.startTimer();
+            String uuid = UUID.randomUUID().toString();
             LOGGER.debug("Waiting to acquire {} lock on {}.", lockMode.toString().toLowerCase(), displayName);
-            System.out.println(System.currentTimeMillis() + ": Waiting to acquire " + lockMode.toString().toLowerCase() + " lock on " + displayName + ": " + metaDataProvider.getProcessIdentifier());
+            System.out.println(metaDataProvider.getProcessIdentifier() + ":" + System.currentTimeMillis() + ":" + uuid + ": Waiting to acquire " + lockMode.toString().toLowerCase() + " lock on " + displayName + ": " + metaDataProvider.getProcessIdentifier());
 
             // Lock the state region, with the requested mode
-            java.nio.channels.FileLock stateRegionLock = lockStateRegion(lockMode);
+            java.nio.channels.FileLock stateRegionLock = lockStateRegion(lockMode, uuid);
             if (stateRegionLock == null) {
                 LockInfo lockInfo = readInformationRegion(new ExponentialBackoff(shortTimeoutMs));
                 throw new LockTimeoutException(displayName, lockInfo.pid, metaDataProvider.getProcessIdentifier(), lockInfo.operation, operationDisplayName, lockFile);
@@ -312,7 +317,8 @@ public class DefaultFileLockManager implements FileLockManager {
                     // Just read the state region
                     lockState = lockFileAccess.readLockState();
                 }
-                System.out.println(System.currentTimeMillis() + ": Lock acquired on " + displayName + ": " + metaDataProvider.getProcessIdentifier());
+                System.out.println(metaDataProvider.getProcessIdentifier() + ":" + System.currentTimeMillis() + ":" + uuid + ": Lock acquired on " + displayName + ": " + metaDataProvider.getProcessIdentifier() + " after " + timer.getElapsedMillis());
+                System.out.println("lockAcquireTimeMillis:" + timer.getElapsedMillis());
                 LOGGER.debug("Lock acquired on {}.", displayName);
                 lock = stateRegionLock;
                 return lockState;
@@ -338,7 +344,7 @@ public class DefaultFileLockManager implements FileLockManager {
             return out;
         }
 
-        private java.nio.channels.FileLock lockStateRegion(final LockMode lockMode) throws IOException, InterruptedException {
+        private java.nio.channels.FileLock lockStateRegion(final LockMode lockMode, final String uuid) throws IOException, InterruptedException {
             final ExponentialBackoff backoff = new ExponentialBackoff(lockTimeoutMs);
             return backoff.retryUntil(new IOQuery<java.nio.channels.FileLock>() {
                 private long lastPingTime;
@@ -346,10 +352,10 @@ public class DefaultFileLockManager implements FileLockManager {
 
                 @Override
                 public java.nio.channels.FileLock run() throws IOException, InterruptedException {
-                    System.out.println(System.currentTimeMillis() + ": Trying to get FileLock: " + metaDataProvider.getProcessIdentifier());
+                    System.out.println(metaDataProvider.getProcessIdentifier() + ":" + System.currentTimeMillis() + ":" + uuid + ": Trying to get FileLock for " + lockFile);
                     java.nio.channels.FileLock fileLock = lockFileAccess.tryLockState(lockMode == LockMode.Shared);
                     if (fileLock != null) {
-                        System.out.println(System.currentTimeMillis() + ": Got FileLock: " + metaDataProvider.getProcessIdentifier());
+                        System.out.println(metaDataProvider.getProcessIdentifier() + ":" + System.currentTimeMillis() + ":" + uuid + ": Got FileLock for " + lockFile);
                         return fileLock;
                     }
                     if (port != -1) { //we don't like the assumption about the port very much
@@ -360,9 +366,9 @@ public class DefaultFileLockManager implements FileLockManager {
                                 lastLockHolderPort = lockInfo.port;
                                 lastPingTime = 0;
                             }
-                            System.out.println(System.currentTimeMillis() + ": maybePingOwner: port = [" + lockInfo.port + "], lockId = [" + lockInfo.lockId + "], displayName = [" + displayName + "], timeElapsed = [" + (backoff.timer.getElapsedMillis() - lastPingTime) + "]: " + metaDataProvider.getProcessIdentifier());
+                            System.out.println(metaDataProvider.getProcessIdentifier() + ":" + System.currentTimeMillis() + ":" + uuid + ": maybePingOwner: port = [" + lockInfo.port + "], lockId = [" + lockInfo.lockId + "], displayName = [" + displayName + "], timeElapsed = [" + (backoff.timer.getElapsedMillis() - lastPingTime) + "]: " + metaDataProvider.getProcessIdentifier());
                             if (fileLockContentionHandler.maybePingOwner(lockInfo.port, lockInfo.lockId, displayName, backoff.timer.getElapsedMillis() - lastPingTime)) {
-                                System.out.println(System.currentTimeMillis() + ": successful ping from " + metaDataProvider.getProcessIdentifier() + " to " + lockInfo.port);
+                                System.out.println(metaDataProvider.getProcessIdentifier() + ":" + System.currentTimeMillis() + ":" + uuid + ": successful ping to " + lockInfo.port);
                                 lastPingTime = backoff.timer.getElapsedMillis();
                                 LOGGER.debug("The file lock is held by a different Gradle process (pid: {}, lockId: {}). Pinged owner at port {}", lockInfo.pid, lockInfo.lockId, lockInfo.port);
                             }
@@ -370,7 +376,7 @@ public class DefaultFileLockManager implements FileLockManager {
                             LOGGER.debug("The file lock is held by a different Gradle process. I was unable to read on which port the owner listens for lock access requests.");
                         }
                     }
-                    System.out.println(System.currentTimeMillis() + ": Did not get FileLock: " + metaDataProvider.getProcessIdentifier());
+                    System.out.println(metaDataProvider.getProcessIdentifier() + ":" + System.currentTimeMillis() + ":" + uuid + ": Did not get FileLock for " + lockFile);
                     return null;
                 }
             });
