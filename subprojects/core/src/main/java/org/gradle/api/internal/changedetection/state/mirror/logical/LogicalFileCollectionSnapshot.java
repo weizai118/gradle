@@ -18,6 +18,7 @@ package org.gradle.api.internal.changedetection.state.mirror.logical;
 
 import com.google.common.base.Joiner;
 import com.google.common.base.Strings;
+import com.google.common.collect.Lists;
 import org.gradle.api.Action;
 import org.gradle.api.internal.changedetection.rules.FileChange;
 import org.gradle.api.internal.changedetection.state.FileContentSnapshot;
@@ -26,10 +27,12 @@ import org.gradle.internal.file.FileType;
 
 import javax.annotation.Nullable;
 import java.io.File;
+import java.util.ArrayList;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -115,12 +118,20 @@ public class LogicalFileCollectionSnapshot {
     private void compare(final String basePath, final LogicalSnapshot newRoot, final LogicalSnapshot oldRoot, final Action<FileChange> changeVisitor, final AtomicBoolean stopFlag) {
         System.out.println("Comparing " + basePath);
         newRoot.accept(new PathTrackingLogicalSnapshotVisitor(basePath, newRoot) {
-            private Deque<LogicalDirectorySnapshot> currentOldValue = new LinkedList<LogicalDirectorySnapshot>();
+            private Deque<LogicalDirectorySnapshot> currentOldValue = Lists.newLinkedList();
+            private Deque<List<String>> visitedChilds = Lists.newLinkedList();
 
             @Override
             public boolean visitFile(final LogicalFileSnapshot file) {
+                if (!isRoot(file)) {
+                    visitedChilds.peekLast().add(file.getName());
+                }
                 LogicalSnapshot oldSnapshot = getOldValue(file, file.getName());
                 System.out.println("Check if same: " + getAbsolutePath(file.getName()));
+                if (oldSnapshot == null) {
+                    changeVisitor.execute(FileChange.added(getAbsolutePath(file.getName()), TITLE, FileType.RegularFile));
+                    return !stopFlag.get();
+                }
                 oldSnapshot.accept(new LogicalSnapshotVisitor() {
                     @Override
                     public boolean visitFile(LogicalFileSnapshot oldFile) {
@@ -152,7 +163,16 @@ public class LogicalFileCollectionSnapshot {
             @Override
             public boolean visitEnter(final LogicalDirectorySnapshot dir) {
                 super.visitEnter(dir);
+                if (!isRoot(dir)) {
+                    visitedChilds.peekLast().add(dir.getName());
+                }
+                visitedChilds.addLast(new ArrayList<String>());
+
                 LogicalSnapshot oldSnapshot = getOldValue(dir, dir.getName());
+                if (oldSnapshot == null) {
+                    dir.accept(new AddSubtreeChanges(getAbsolutePath(), dir, new Added(changeVisitor), stopFlag, true));
+                    return false;
+                }
                 boolean isFile = oldSnapshot.accept(new LogicalSnapshotVisitor() {
                     @Override
                     public boolean visitFile(LogicalFileSnapshot file) {
@@ -178,7 +198,15 @@ public class LogicalFileCollectionSnapshot {
 
             @Override
             public boolean visitLeave(LogicalDirectorySnapshot dir) {
-                currentOldValue.removeLast();
+                LogicalDirectorySnapshot oldValue = currentOldValue.removeLast();
+                List<String> visitedNewChilds = visitedChilds.removeLast();
+                Set<String> removed = new HashSet<String>(oldValue.getChildren().keySet());
+                removed.removeAll(visitedNewChilds);
+                for (String name : removed) {
+                    LogicalSnapshot logicalSnapshot = oldValue.getChildren().get(name);
+                    logicalSnapshot.accept(new AddSubtreeChanges(getAbsolutePath(name), logicalSnapshot, new Removed(changeVisitor), stopFlag, true));
+                }
+
                 super.visitLeave(dir);
                 return !stopFlag.get();
             }

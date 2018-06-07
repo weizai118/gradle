@@ -52,10 +52,10 @@ public abstract class AbstractPhysicalDirectorySnapshot implements PhysicalSnaps
 
     @Override
     public void visitTree(PhysicalFileVisitor visitor, Deque<String> relativePath) {
-        for (Map.Entry<String, PhysicalSnapshot> entry : getChildren().entrySet()) {
-            relativePath.addLast(entry.getKey());
-            entry.getValue().visitSelf(visitor, relativePath);
-            entry.getValue().visitTree(visitor, relativePath);
+        for (PhysicalSnapshot snapshot : getChildren().values()) {
+            relativePath.addLast(snapshot.getName());
+            snapshot.visitSelf(visitor, relativePath);
+            snapshot.visitTree(visitor, relativePath);
             relativePath.removeLast();
         }
     }
@@ -70,8 +70,8 @@ public abstract class AbstractPhysicalDirectorySnapshot implements PhysicalSnaps
     @Override
     public void visit(HierarchicalFileTreeVisitor visitor) {
         visitor.preVisitDirectory(path, name);
-        for (Map.Entry<String, PhysicalSnapshot> entry : getChildren().entrySet()) {
-            entry.getValue().visit(visitor);
+        for (PhysicalSnapshot snapshot : getChildren().values()) {
+            snapshot.visit(visitor);
         }
         visitor.postVisitDirectory();
     }

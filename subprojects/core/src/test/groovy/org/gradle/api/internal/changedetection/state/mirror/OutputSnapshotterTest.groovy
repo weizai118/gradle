@@ -127,6 +127,44 @@ class OutputSnapshotterTest extends Specification {
         changes.findAll { it. change != ChangeType.MODIFIED }.empty
     }
 
+    def "detects removed file"() {
+        def root = temporaryFolder.createDir("build/output")
+        createClassesDir(root)
+        def removedFile = root.file('org/gradle/packge/File25.class')
+        removedFile.text = "Will be removed"
+
+        when:
+        def snapshotBefore = outputSnapshotter.snapshot(files(root))
+        fileSystemMirror.beforeTaskOutputChanged()
+        then:
+        removedFile.delete()
+
+        when:
+        def snapshotAfter = outputSnapshotter.snapshot(files(root))
+        def changes = getChanges(snapshotBefore, snapshotAfter)
+
+        then:
+        changes.findAll { it.change == ChangeType.REMOVED }*.path == [removedFile.absolutePath]
+        changes.findAll { it. change != ChangeType.REMOVED }.empty
+    }
+
+    def "detects added file"() {
+        def root = temporaryFolder.createDir("build/output")
+        createClassesDir(root)
+        def addedFile = root.file('org/gradle/package/File25.class')
+
+        when:
+        def snapshotBefore = outputSnapshotter.snapshot(files(root))
+        fileSystemMirror.beforeTaskOutputChanged()
+        addedFile.text = "added"
+        def snapshotAfter = outputSnapshotter.snapshot(files(root))
+        def changes = getChanges(snapshotBefore, snapshotAfter)
+
+        then:
+        changes.findAll { it.change == ChangeType.ADDED }*.path == [addedFile.absolutePath]
+        changes.findAll { it. change != ChangeType.ADDED }.empty
+    }
+
     private static List<FileChange> getChanges(LogicalFileCollectionSnapshot snapshotBefore, LogicalFileCollectionSnapshot snapshotAfter) {
         def stopFlag = new AtomicBoolean()
         def changes = []
