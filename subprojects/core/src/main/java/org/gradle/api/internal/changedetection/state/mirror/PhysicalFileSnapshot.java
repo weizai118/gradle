@@ -36,14 +36,6 @@ public class PhysicalFileSnapshot implements PhysicalSnapshot {
         this.hash = contentMd5;
     }
 
-    @Override
-    public PhysicalSnapshot find(String[] segments, int offset) {
-        if (segments.length == offset) {
-            return this;
-        }
-        return null;
-    }
-
     public Path getPath() {
         return path;
     }

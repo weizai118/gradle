@@ -19,8 +19,6 @@ package org.gradle.api.internal.changedetection.state.mirror;
 import org.gradle.api.internal.changedetection.state.MissingFileContentSnapshot;
 
 import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.Arrays;
 import java.util.Deque;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -34,16 +32,6 @@ public class PhysicalMissingFileSnapshot implements PhysicalSnapshot {
     public PhysicalMissingFileSnapshot(Path path, String name) {
         this.path = path;
         this.name = name;
-    }
-
-    @Override
-    public PhysicalSnapshot find(String[] segments, int offset) {
-        if (segments.length == offset) {
-            return this;
-        }
-        // children of missing files are missing - no snapshotting required.
-        Path newPath = path.resolve(Paths.get(segments[0], Arrays.copyOfRange(segments, 1, segments.length)));
-        return add(segments, offset, new PhysicalMissingFileSnapshot(newPath, segments[segments.length - 1]));
     }
 
     @Override
