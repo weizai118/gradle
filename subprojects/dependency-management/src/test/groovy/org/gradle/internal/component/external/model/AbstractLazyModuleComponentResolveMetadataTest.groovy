@@ -25,7 +25,7 @@ import spock.lang.Specification
 
 import static org.gradle.internal.component.external.model.DefaultModuleComponentSelector.newSelector
 
-abstract class AbstractModuleComponentResolveMetadataTest extends Specification {
+abstract class AbstractLazyModuleComponentResolveMetadataTest extends Specification {
 
     def id = DefaultModuleComponentIdentifier.newId("group", "module", "version")
     def configurations = []
