@@ -27,10 +27,12 @@ import org.gradle.api.artifacts.DirectDependencyMetadata;
 import org.gradle.api.capabilities.MutableCapabilitiesMetadata;
 import org.gradle.api.attributes.AttributeContainer;
 import org.gradle.api.capabilities.Capability;
+import org.gradle.api.internal.artifacts.repositories.resolver.ComponentMetadataDetailsAdapter;
 import org.gradle.api.internal.attributes.AttributeContainerInternal;
 import org.gradle.api.internal.attributes.ImmutableAttributes;
 import org.gradle.api.internal.attributes.ImmutableAttributesFactory;
 import org.gradle.api.specs.Spec;
+import org.gradle.api.specs.Specs;
 import org.gradle.internal.Cast;
 import org.gradle.internal.component.model.CapabilitiesRules;
 import org.gradle.internal.component.model.DependencyMetadataRules;
@@ -39,14 +41,18 @@ import org.gradle.internal.component.model.VariantResolveMetadata;
 import org.gradle.internal.reflect.Instantiator;
 import org.gradle.internal.typeconversion.NotationParser;
 
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Set;
 
 public class VariantMetadataRules {
     private final ImmutableAttributesFactory attributesFactory;
     private DependencyMetadataRules dependencyMetadataRules;
     private VariantAttributesRules variantAttributesRules;
     private CapabilitiesRules capabilitiesRules;
+    private Set<String> seenVariants;
+    private boolean seenAllVariants;
 
     public VariantMetadataRules(ImmutableAttributesFactory attributesFactory) {
         this.attributesFactory = attributesFactory;
@@ -100,6 +106,27 @@ public class VariantMetadataRules {
             capabilitiesRules = new CapabilitiesRules();
         }
         capabilitiesRules.addCapabilitiesAction(action);
+        recordVariantSeen(action.spec);
+    }
+
+    private void recordVariantSeen(Spec<? super VariantResolveMetadata> spec) {
+        if (spec == Specs.satisfyAll()) {
+            seenAllVariants = true;
+        } else if (spec instanceof ComponentMetadataDetailsAdapter.VariantNameSpec) {
+            seenVariants.add(((ComponentMetadataDetailsAdapter.VariantNameSpec) spec).getName());
+        }
+
+    }
+
+    Set<String> getSeenVariants() {
+        if (seenVariants == null) {
+            return Collections.emptySet();
+        }
+        return seenVariants;
+    }
+
+    boolean isSeenAllVariants() {
+        return seenAllVariants;
     }
 
     public static VariantMetadataRules noOp() {

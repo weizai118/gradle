@@ -266,7 +266,7 @@ dependencies {
         outputDoesNotContain('Attribute rule executed')
     }
 
-    @Ignore
+//    @Ignore
     @ToBeImplemented
     @RequiredFeatures(
         @RequiredFeature(feature = GradleMetadataResolveRunner.GRADLE_METADATA, value = "true")

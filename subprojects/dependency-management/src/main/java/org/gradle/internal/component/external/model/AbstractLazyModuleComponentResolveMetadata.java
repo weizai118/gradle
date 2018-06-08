@@ -43,6 +43,10 @@ abstract class AbstractLazyModuleComponentResolveMetadata extends AbstractModule
         variantMetadataRules = metadata.variantMetadataRules;
     }
 
+    protected VariantMetadataRules getVariantMetadataRules() {
+        return variantMetadataRules;
+    }
+
     /**
      * Clear any cached state, for the case where the inputs are invalidated.
      * This only happens when constructing a copy

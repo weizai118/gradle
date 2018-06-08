@@ -78,7 +78,7 @@ abstract class AbstractModuleComponentResolveMetadata implements ModuleComponent
         variants = metadata.getVariants();
     }
 
-    public AbstractModuleComponentResolveMetadata(AbstractMutableModuleComponentResolveMetadata metadata, ImmutableList<? extends ComponentVariant> variants) {
+    public AbstractModuleComponentResolveMetadata(AbstractModuleComponentResolveMetadata metadata, ImmutableList<? extends ComponentVariant> variants) {
         this.componentIdentifier = metadata.getId();
         this.moduleVersionIdentifier = metadata.getModuleVersionId();
         changing = metadata.isChanging();
@@ -88,7 +88,7 @@ abstract class AbstractModuleComponentResolveMetadata implements ModuleComponent
         configurationDefinitions = metadata.getConfigurationDefinitions();
         attributesFactory = metadata.getAttributesFactory();
         contentHash = metadata.getContentHash();
-        attributes = extractAttributes(metadata);
+        attributes = metadata.getAttributes();
         this.variants = variants;
     }
 

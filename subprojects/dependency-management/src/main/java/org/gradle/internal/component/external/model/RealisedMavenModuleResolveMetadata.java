@@ -1,5 +1,5 @@
 /*
- * Copyright 2014 the original author or authors.
+ * Copyright 2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,11 +19,13 @@ package org.gradle.internal.component.external.model;
 import com.google.common.base.Objects;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 import org.gradle.api.artifacts.component.ModuleComponentIdentifier;
 import org.gradle.api.attributes.Attribute;
 import org.gradle.api.attributes.Usage;
-import org.gradle.api.internal.attributes.AttributeContainerInternal;
 import org.gradle.api.internal.attributes.AttributesSchemaInternal;
+import org.gradle.api.internal.attributes.ImmutableAttributes;
 import org.gradle.api.internal.attributes.ImmutableAttributesFactory;
 import org.gradle.api.internal.changedetection.state.CoercingStringValueSnapshot;
 import org.gradle.api.internal.model.NamedObjectInstantiator;
@@ -37,15 +39,36 @@ import org.gradle.internal.component.model.ModuleSource;
 import javax.annotation.Nullable;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 
-public class DefaultMavenModuleResolveMetadata extends AbstractLazyModuleComponentResolveMetadata implements MavenModuleResolveMetadata {
+public class RealisedMavenModuleResolveMetadata extends AbstractRealisedModuleComponentResolveMetadata implements MavenModuleResolveMetadata {
 
     public static final String POM_PACKAGING = "pom";
     public static final Collection<String> JAR_PACKAGINGS = Arrays.asList("jar", "ejb", "bundle", "maven-plugin", "eclipse-plugin");
     private static final PreferJavaRuntimeVariant SCHEMA_DEFAULT_JAVA_VARIANTS = PreferJavaRuntimeVariant.schema();
     // We need to work with the 'String' version of the usage attribute, since this is expected for all providers by the `PreferJavaRuntimeVariant` schema
     private static final Attribute<String> USAGE_ATTRIBUTE = Attribute.of(Usage.USAGE_ATTRIBUTE.getName(), String.class);
+
+    public static RealisedMavenModuleResolveMetadata transform(DefaultMavenModuleResolveMetadata metadata) {
+        VariantMetadataRules variantMetadataRules = metadata.getVariantMetadataRules();
+        HashSet<String> remainingVariants = Sets.newHashSet(variantMetadataRules.getSeenVariants());
+        boolean allVariantsUsed = variantMetadataRules.isSeenAllVariants();
+        ImmutableList<? extends ComponentVariant> variants = enrichVariants(metadata, variantMetadataRules, metadata.getVariants(), remainingVariants);
+        Map<String, ImmutableAttributes> potentialVariantToAttributesMap = Maps.newHashMapWithExpectedSize(remainingVariants.size());
+        for (String variant : remainingVariants) {
+            ImmutableAttributes variantAttributes = variantMetadataRules.applyVariantAttributeRules(new NameOnlyVariantResolveMetadata(variant), ImmutableAttributes.EMPTY);
+            potentialVariantToAttributesMap.put(variant, variantAttributes);
+        }
+        ImmutableAttributes allVariantsAttributes;
+        if (allVariantsUsed) {
+            allVariantsAttributes = variantMetadataRules.applyVariantAttributeRules(new NameOnlyVariantResolveMetadata(ALL_VARIANTS_NAME), ImmutableAttributes.EMPTY);
+        } else {
+            allVariantsAttributes = ImmutableAttributes.EMPTY;
+        }
+        return new RealisedMavenModuleResolveMetadata(metadata, variants, potentialVariantToAttributesMap, allVariantsAttributes);
+    }
 
     private final boolean improvedPomSupportEnabled;
     private final NamedObjectInstantiator objectInstantiator;
@@ -57,8 +80,8 @@ public class DefaultMavenModuleResolveMetadata extends AbstractLazyModuleCompone
 
     private ImmutableList<? extends ConfigurationMetadata> derivedVariants;
 
-    DefaultMavenModuleResolveMetadata(DefaultMutableMavenModuleResolveMetadata metadata) {
-        super(metadata);
+    public RealisedMavenModuleResolveMetadata(DefaultMavenModuleResolveMetadata metadata, ImmutableList<? extends ComponentVariant> variants, Map<String, ImmutableAttributes> potentialVariantToAttributesMap, ImmutableAttributes allVariantsAttributes) {
+        super(metadata, variants, potentialVariantToAttributesMap, allVariantsAttributes);
         this.improvedPomSupportEnabled = metadata.isImprovedPomSupportEnabled();
         this.objectInstantiator = metadata.getObjectInstantiator();
         packaging = metadata.getPackaging();
@@ -67,7 +90,7 @@ public class DefaultMavenModuleResolveMetadata extends AbstractLazyModuleCompone
         dependencies = metadata.getDependencies();
     }
 
-    private DefaultMavenModuleResolveMetadata(DefaultMavenModuleResolveMetadata metadata, ModuleSource source) {
+    private RealisedMavenModuleResolveMetadata(RealisedMavenModuleResolveMetadata metadata, ModuleSource source) {
         super(metadata, source);
         this.improvedPomSupportEnabled = metadata.improvedPomSupportEnabled;
         this.objectInstantiator = metadata.objectInstantiator;
@@ -80,9 +103,9 @@ public class DefaultMavenModuleResolveMetadata extends AbstractLazyModuleCompone
     }
 
     @Override
-    protected DefaultConfigurationMetadata createConfiguration(ModuleComponentIdentifier componentId, String name, boolean transitive, boolean visible, ImmutableList<String> parents, VariantMetadataRules componentMetadataRules) {
+    protected RealisedConfigurationMetadata createConfiguration(ModuleComponentIdentifier componentId, String name, boolean transitive, boolean visible, ImmutableList<String> hierarchy, Map<String, ImmutableAttributes> potentialVariantToAttributesMap, ImmutableAttributes allVariantsAttributes) {
         ImmutableList<? extends ModuleComponentArtifactMetadata> artifacts = getArtifactsForConfiguration(name);
-        DefaultConfigurationMetadata configuration = new DefaultConfigurationMetadata(componentId, name, transitive, visible, parents, artifacts, componentMetadataRules, ImmutableList.<ExcludeMetadata>of(), ((AttributeContainerInternal)getAttributes()).asImmutable());
+        RealisedConfigurationMetadata configuration = new RealisedConfigurationMetadata(componentId, name, transitive, visible, hierarchy, artifacts, ImmutableList.<ExcludeMetadata>of(), getAttributes().asImmutable());
         configuration.setDependencies(filterDependencies(configuration));
         return configuration;
     }
@@ -94,15 +117,24 @@ public class DefaultMavenModuleResolveMetadata extends AbstractLazyModuleCompone
 
     private ImmutableList<? extends ConfigurationMetadata> getDerivedVariants() {
         if (derivedVariants == null) {
+            ImmutableAttributes additionalCompileAttributes = getPotentialVariantToAttributesMap().get("compile");
+            if (additionalCompileAttributes == null) {
+                additionalCompileAttributes = getAllVariantsAttributes();
+            }
+            ImmutableAttributes additionalRuntimeAttributes = getPotentialVariantToAttributesMap().get("runtime");
+            if (additionalCompileAttributes == null) {
+                additionalCompileAttributes = getAllVariantsAttributes();
+            }
             derivedVariants = ImmutableList.of(
-                withUsageAttribute((DefaultConfigurationMetadata) getConfiguration("compile"), Usage.JAVA_API, getAttributesFactory()),
-                withUsageAttribute((DefaultConfigurationMetadata) getConfiguration("runtime"), Usage.JAVA_RUNTIME, getAttributesFactory()));
+                withUsageAttribute((DefaultConfigurationMetadata) getConfiguration("compile"), Usage.JAVA_API, getAttributesFactory(), additionalCompileAttributes),
+                withUsageAttribute((DefaultConfigurationMetadata) getConfiguration("runtime"), Usage.JAVA_RUNTIME, getAttributesFactory(), additionalRuntimeAttributes));
         }
         return derivedVariants;
     }
 
-    private ConfigurationMetadata withUsageAttribute(DefaultConfigurationMetadata conf, String usage, ImmutableAttributesFactory attributesFactory) {
-        return conf.withAttributes(attributesFactory.concat(getAttributes().asImmutable(), USAGE_ATTRIBUTE, new CoercingStringValueSnapshot(usage, objectInstantiator)));
+    private ConfigurationMetadata withUsageAttribute(DefaultConfigurationMetadata conf, String usage, ImmutableAttributesFactory attributesFactory, ImmutableAttributes additionalAttributes) {
+        ImmutableAttributes attributes = attributesFactory.concat(getAttributes().asImmutable(), USAGE_ATTRIBUTE, new CoercingStringValueSnapshot(usage, objectInstantiator));
+        return conf.withAttributes(attributesFactory.concat(attributes, additionalAttributes));
     }
 
     private ImmutableList<? extends ModuleComponentArtifactMetadata> getArtifactsForConfiguration(String name) {
@@ -115,7 +147,7 @@ public class DefaultMavenModuleResolveMetadata extends AbstractLazyModuleCompone
         return artifacts;
     }
 
-    private ImmutableList<ModuleDependencyMetadata> filterDependencies(DefaultConfigurationMetadata config) {
+    private ImmutableList<ModuleDependencyMetadata> filterDependencies(ConfigurationMetadata config) {
         ImmutableList.Builder<ModuleDependencyMetadata> filteredDependencies = ImmutableList.builder();
         boolean isOptionalConfiguration = "optional".equals(config.getName());
 
@@ -158,13 +190,13 @@ public class DefaultMavenModuleResolveMetadata extends AbstractLazyModuleCompone
     }
 
     @Override
-    public DefaultMavenModuleResolveMetadata withSource(ModuleSource source) {
-        return new DefaultMavenModuleResolveMetadata(this, source);
+    public RealisedMavenModuleResolveMetadata withSource(ModuleSource source) {
+        return new RealisedMavenModuleResolveMetadata(this, source);
     }
 
     @Override
     public MutableMavenModuleResolveMetadata asMutable() {
-        return new DefaultMutableMavenModuleResolveMetadata(this, objectInstantiator, improvedPomSupportEnabled);
+        throw new UnsupportedOperationException("Implement me!");
     }
 
     public String getPackaging() {
@@ -181,14 +213,6 @@ public class DefaultMavenModuleResolveMetadata extends AbstractLazyModuleCompone
 
     public boolean isKnownJarPackaging() {
         return JAR_PACKAGINGS.contains(packaging);
-    }
-
-    boolean isImprovedPomSupportEnabled() {
-        return improvedPomSupportEnabled;
-    }
-
-    NamedObjectInstantiator getObjectInstantiator() {
-        return objectInstantiator;
     }
 
     private boolean isJavaLibrary() {
@@ -223,7 +247,7 @@ public class DefaultMavenModuleResolveMetadata extends AbstractLazyModuleCompone
             return false;
         }
 
-        DefaultMavenModuleResolveMetadata that = (DefaultMavenModuleResolveMetadata) o;
+        RealisedMavenModuleResolveMetadata that = (RealisedMavenModuleResolveMetadata) o;
         return relocated == that.relocated
             && Objects.equal(dependencies, that.dependencies)
             && Objects.equal(packaging, that.packaging)
