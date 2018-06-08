@@ -21,6 +21,8 @@ import org.gradle.samples.executor.ExecutionMetadata
 class NativeComponentReportOutputNormalizer implements OutputNormalizer {
     @Override
     String normalize(String commandOutput, ExecutionMetadata executionMetadata) {
-        return commandOutput.replaceAll("platform '[\\w+\\-]+'","platform 'current'")
+        return commandOutput
+            .replaceAll("Tool chain '[\\w+\\-]+' ([\\w\\- ]+)","Tool chain 'clang' (Clang)")
+            .replaceAll("platform '[\\w+\\-]+'","platform 'current'")
     }
 }
