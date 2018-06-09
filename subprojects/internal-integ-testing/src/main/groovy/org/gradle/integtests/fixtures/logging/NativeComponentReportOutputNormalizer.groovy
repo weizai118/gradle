@@ -22,7 +22,7 @@ class NativeComponentReportOutputNormalizer implements OutputNormalizer {
     @Override
     String normalize(String commandOutput, ExecutionMetadata executionMetadata) {
         return commandOutput
-            .replaceAll("Tool chain '[\\w+\\-]+' ([\\w\\- ]+)","Tool chain 'clang' (Clang)")
+            .replaceAll("Tool chain '[\\w+\\-]+' \\([\\w\\- ]+\\)","Tool chain 'clang' (Clang)")
             .replaceAll("platform '[\\w+\\-]+'","platform 'current'")
     }
 }

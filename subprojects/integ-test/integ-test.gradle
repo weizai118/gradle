@@ -4,6 +4,10 @@ plugins {
     id 'gradlebuild.classycle'
 }
 
+repositories {
+    mavenLocal()
+}
+
 dependencies {
     integTestCompile libraries.groovy.coordinates
     integTestCompile libraries.ant.coordinates
