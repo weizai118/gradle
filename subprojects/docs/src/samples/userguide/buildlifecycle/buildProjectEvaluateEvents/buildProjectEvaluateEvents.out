@@ -5,7 +5,7 @@ Evaluation of project ':projectB' FAILED
 FAILURE: Build failed with an exception.
 
 * Where:
-Build file '/home/user/gradle/samples/buildProjectEvaluateEvents/projectB.gradle' line: 1
+Build file '/home/user/gradle/samples/projectB.gradle' line: 1
 
 * What went wrong:
 A problem occurred evaluating project ':projectB'.
