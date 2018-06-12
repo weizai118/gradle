@@ -11,9 +11,11 @@ you don't need to hardcode it into the build script - you can just run `gradle r
 IMPORTANT: if this is a patch release, ensure that a prominent link is included in the foreword to all releases of the same minor stream.
 Add-->
 
-<!--
-### Example new and noteworthy
--->
+### Nested included builds
+
+TBD - Composite builds can be included by other builds. Some combinations are not supported yet:
+- `buildSrc` cannot include other builds.
+- No duplicate root project names.
 
 ## Promoted features
 
@@ -52,6 +54,10 @@ In previous versions of Gradle, it was sometimes possible to use a [GPath](http:
 For instance, `tasks.withType(SomeTask).name` would create a list of `String`s containing all of the names of tasks of type `SomeTask`. This was only possible with the method [`TaskCollection.withType(Class)`](javadoc/org/gradle/api/tasks/TaskCollection.html#withType-java.lang.Class-).
 
 Plugins or build scripts attempting to do this will now get a runtime exception.  The easiest fix is to explicitly use the [spread operator](http://docs.groovy-lang.org/latest/html/documentation/#_spread_operator).
+
+### Eclipse plugin
+
+TBD - The `eclipse` task now generates an Eclipse project for all Gradle projects in included builds. 
 
 ## External contributions
 
