@@ -14,18 +14,14 @@
  * limitations under the License.
  */
 
-package org.gradle.api.internal.changedetection.state.mirror;
+package org.gradle.api.internal.changedetection.state.mirror.logical;
 
-import java.nio.file.Path;
-import java.util.Deque;
+import com.google.common.collect.ListMultimap;
+import org.gradle.api.internal.changedetection.state.FileCollectionSnapshot;
 
-@SuppressWarnings("Since15")
-public interface PhysicalSnapshot {
-    Path getPath();
-    String getName();
-    PhysicalSnapshot add(String[] segments, int offset, PhysicalSnapshot snapshot);
-
-    void visitTree(PhysicalFileVisitor visitor, Deque<String> relativePath);
-    void visitSelf(PhysicalFileVisitor visitor, Deque<String> relativePath);
-    void accept(HierarchicalFileTreeVisitor visitor);
+public class AbsolutePathFileCollectionSnapshotBuilder extends RootFileCollectionSnapshotBuilder {
+    @Override
+    protected FileCollectionSnapshot build(ListMultimap<String, LogicalSnapshot> roots) {
+        return new AbsolutePathFileCollectionSnapshot(roots);
+    }
 }
