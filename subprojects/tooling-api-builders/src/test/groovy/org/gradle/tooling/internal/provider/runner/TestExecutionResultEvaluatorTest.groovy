@@ -23,7 +23,7 @@ import org.gradle.api.internal.tasks.testing.operations.ExecuteTestBuildOperatio
 import org.gradle.api.tasks.testing.TestExecutionException
 import org.gradle.api.tasks.testing.TestResult
 import org.gradle.internal.operations.BuildOperationDescriptor
-import org.gradle.internal.operations.OperationFinishEvent
+import org.gradle.internal.operations.DefaultOperationFinishEvent
 import org.gradle.internal.operations.OperationIdentifier
 import org.gradle.internal.operations.OperationStartEvent
 import org.gradle.tooling.internal.protocol.test.InternalJvmTestRequest
@@ -72,7 +72,7 @@ class TestExecutionResultEvaluatorTest extends Specification {
             .build()
 
         when:
-        evaluator.finished(descriptor, new OperationFinishEvent(0, 1, null, result))
+        evaluator.finished(descriptor, new DefaultOperationFinishEvent(0, 1, null, result))
         evaluator.evaluate()
 
         then:
@@ -124,7 +124,7 @@ class TestExecutionResultEvaluatorTest extends Specification {
 
         when:
         evaluator.started(taskBuildOperation, new OperationStartEvent(0))
-        evaluator.finished(testBuildOperation, new OperationFinishEvent(0, 0, null, result))
+        evaluator.finished(testBuildOperation, new DefaultOperationFinishEvent(0, 0, null, result))
         evaluator.evaluate()
 
         then:

@@ -344,4 +344,37 @@ class ResolveConfigurationDependenciesBuildOperationIntegrationTest extends Abst
         mavenHttpRepo.module('org.foo', 'app-dep').publish().allowAll()
     }
 
+
+    def "failed resolved configurations are exposed via build operation"() {
+        setup:
+        buildFile << """    
+            ${jcenterRepository()}
+            
+            configurations {
+                compile {
+                    resolutionStrategy.failOnVersionConflict()
+                }
+            }
+                        
+            dependencies {
+               compile 'cheshire:cheshire:5.7.1'
+               compile 'com.github.fakemongo:fongo:2.1.1'
+            }
+            
+            task resolve {
+              doLast {
+                  println(configurations.compile.files.name)
+              }
+            }
+"""
+
+        when:
+        fails "resolve"
+
+        then:
+        def op = operations.first(ResolveConfigurationDependenciesBuildOperationType)
+        op.details.configurationName == "compile"
+        op.failure != null
+    }
+
 }

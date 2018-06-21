@@ -541,10 +541,22 @@ public class DefaultConfiguration extends AbstractFileCollection implements Conf
                 dependencyResolutionListeners.getSource().afterResolve(incoming);
                 // Discard listeners
                 dependencyResolutionListeners.removeAll();
-                context.setResult(new ResolveConfigurationDependenciesBuildOperationType.Result() {
+
+                // Sets the build operation result. We're using a deferred operation result here, because
+                // if resolution fails, we want to know as late as possible, in order to give a chance to
+                // tasks to react (for example, the dependency insight report task sets a custom error
+                // handler). So when the operation completes, we _still don't know_ if the resolution would
+                // have failed or not. Only when we read the operation result, we would.
+                context.deferredResult(new Factory<ResolveConfigurationDependenciesBuildOperationType.Result>() {
                     @Override
-                    public ResolvedComponentResult getRootComponent() {
-                        return incoming.getResolutionResult().getRoot();
+                    public ResolveConfigurationDependenciesBuildOperationType.Result create() {
+                        final ResolvedComponentResult root = incoming.getResolutionResult().getRoot();
+                        return new ResolveConfigurationDependenciesBuildOperationType.Result() {
+                            @Override
+                            public ResolvedComponentResult getRootComponent() {
+                                return root;
+                            }
+                        };
                     }
                 });
             }

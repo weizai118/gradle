@@ -22,6 +22,7 @@ import org.gradle.api.Action;
 import org.gradle.api.GradleException;
 import org.gradle.api.Transformer;
 import org.gradle.concurrent.ParallelismConfiguration;
+import org.gradle.internal.Factory;
 import org.gradle.internal.SystemProperties;
 import org.gradle.internal.UncheckedException;
 import org.gradle.internal.concurrent.ExecutorFactory;
@@ -190,7 +191,13 @@ public class DefaultBuildOperationExecutor implements BuildOperationExecutor, St
             LOGGER.debug("Completing Build operation '{}'", descriptor.getDisplayName());
 
             progressLogger.completed(context.status, context.failure != null);
-            listener.finished(descriptor, new OperationFinishEvent(newOperation.getStartTime(), clock.getCurrentTime(), context.failure, context.result));
+            OperationFinishEvent finishEvent;
+            if (context.deferredProducer != null) {
+                finishEvent = new DeferredOperationFinishEvent(newOperation.getStartTime(), clock.getCurrentTime(), context.deferredProducer);
+            } else {
+                finishEvent = new DefaultOperationFinishEvent(newOperation.getStartTime(), clock.getCurrentTime(), context.failure, context.result);
+            }
+            listener.finished(descriptor, finishEvent);
 
             assertParentRunning("Parent operation (%2$s) completed before this operation (%1$s).", descriptor, parent);
 
@@ -244,7 +251,7 @@ public class DefaultBuildOperationExecutor implements BuildOperationExecutor, St
         BuildOperationState current = getCurrentBuildOperation();
         if (current instanceof UnmanagedThreadOperation) {
             try {
-                listener.finished(current.getDescription(), new OperationFinishEvent(current.getStartTime(), clock.getCurrentTime(), null, null));
+                listener.finished(current.getDescription(), new DefaultOperationFinishEvent(current.getStartTime(), clock.getCurrentTime(), null, null));
             } finally {
                 setCurrentBuildOperation(null);
                 current.setRunning(false);
@@ -280,8 +287,9 @@ public class DefaultBuildOperationExecutor implements BuildOperationExecutor, St
     }
 
     private static class DefaultBuildOperationContext implements BuildOperationContext {
-        Throwable failure;
-        Object result;
+        private Factory<?> deferredProducer;
+        private Throwable failure;
+        private Object result;
         private String status;
 
         @Override
@@ -303,6 +311,11 @@ public class DefaultBuildOperationExecutor implements BuildOperationExecutor, St
         @Override
         public void setStatus(String status) {
             this.status = status;
+        }
+
+        @Override
+        public <T> void deferredResult(Factory<T> producer) {
+            deferredProducer = producer;
         }
     }
 

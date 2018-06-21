@@ -16,6 +16,8 @@
 
 package org.gradle.internal.operations;
 
+import org.gradle.internal.Factory;
+
 import javax.annotation.Nullable;
 
 public interface BuildOperationContext {
@@ -37,4 +39,16 @@ public interface BuildOperationContext {
      * @since 4.0
      */
     void setStatus(String status);
+
+    /**
+     * Marks this operation as <i>eventually producing</i> a result or a failure.
+     * This should be equivalent to callin {@link #setResult(Object)} on a successul operation
+     * and {@link #failed(Throwable)} on a failure. Calling this method should only be done
+     * if we have no way of knowing the result of a build operation when it's actually finished.
+     *
+     * @param producer the producer
+     *
+     * @since 4.9
+     */
+    <T> void deferredResult(Factory<T> producer);
 }

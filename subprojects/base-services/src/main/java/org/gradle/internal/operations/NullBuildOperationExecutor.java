@@ -17,6 +17,7 @@
 package org.gradle.internal.operations;
 
 import org.gradle.api.Action;
+import org.gradle.internal.Factory;
 
 import javax.annotation.Nullable;
 
@@ -38,6 +39,11 @@ public final class NullBuildOperationExecutor implements BuildOperationExecutor 
 
         @Override
         public void setStatus(String status) {
+        }
+
+        @Override
+        public <T> void deferredResult(Factory<T> producer) {
+
         }
     };
 

@@ -22,6 +22,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import org.gradle.api.Action;
+import org.gradle.internal.Factory;
 import org.gradle.internal.UncheckedException;
 
 import javax.annotation.Nullable;
@@ -82,6 +83,7 @@ public class TestBuildOperationExecutor implements BuildOperationExecutor {
         private Object result;
         private String status;
         private Throwable failure;
+        private Factory<?> producer;
 
         @Override
         public void failed(@Nullable Throwable failure) {
@@ -96,6 +98,23 @@ public class TestBuildOperationExecutor implements BuildOperationExecutor {
         @Override
         public void setStatus(String status) {
             this.status = status;
+        }
+
+        @Override
+        public <T> void deferredResult(Factory<T> producer) {
+            this.producer = producer;
+        }
+
+        void realize() {
+            if (producer != null) {
+                try {
+                    result = producer.create();
+                } catch (Throwable e) {
+                    failure = e;
+                } finally {
+                    producer = null;
+                }
+            }
         }
     }
 
@@ -211,6 +230,7 @@ public class TestBuildOperationExecutor implements BuildOperationExecutor {
             try {
                 buildOperation.run(context);
             } catch (Throwable failure) {
+                context.realize();
                 if (record.result == null) {
                     record.result = context.result;
                 }
@@ -219,6 +239,7 @@ public class TestBuildOperationExecutor implements BuildOperationExecutor {
                 }
                 throw UncheckedException.throwAsUncheckedException(failure);
             }
+            context.realize();
             record.result = context.result;
             if (context.failure != null) {
                 record.failure = context.failure;
