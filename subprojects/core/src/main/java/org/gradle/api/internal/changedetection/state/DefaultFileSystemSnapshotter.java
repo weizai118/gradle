@@ -18,6 +18,7 @@ package org.gradle.api.internal.changedetection.state;
 
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import org.gradle.api.NonNullApi;
 import org.gradle.api.file.FileTreeElement;
@@ -52,6 +53,7 @@ import org.gradle.normalization.internal.InputNormalizationStrategy;
 import java.io.File;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.Deque;
 import java.util.List;
 
@@ -197,6 +199,28 @@ public class DefaultFileSystemSnapshotter implements FileSystemSnapshotter {
 
             @Override
             public void accept(HierarchicalFileTreeVisitor visitor) {
+                final List<FileSnapshot> snapshots = new ArrayList<FileSnapshot>();
+                tree.visitTreeOrBackingFile(new FileVisitor() {
+                    @Override
+                    public void visitDir(FileVisitDetails dirDetails) {
+                        snapshots.add(new DirectoryFileSnapshot(stringInterner.intern(dirDetails.getPath()), dirDetails.getRelativePath(), false));
+                    }
+
+                    @Override
+                    public void visitFile(FileVisitDetails fileDetails) {
+                        snapshots.add(new RegularFileSnapshot(stringInterner.intern(fileDetails.getPath()), fileDetails.getRelativePath(), false, fileSnapshot(fileDetails)));
+                    }
+                });
+                if (snapshots.isEmpty()) {
+                    return;
+                }
+                if (snapshots.size() == 1) {
+                    FileSnapshot snapshot = Iterables.getOnlyElement(snapshots);
+                    if (snapshot.getType() != FileType.Directory) {
+                        visitor.visit(Paths.get(snapshot.getPath()), snapshot.getName(), snapshot.getContent());
+                        return;
+                    }
+                }
                 throw new UnsupportedOperationException("Arbitrary FileTreeInternals are not supported yet");
             }
         };
